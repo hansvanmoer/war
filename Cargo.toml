@@ -8,6 +8,9 @@ edition = "2021"
 [dependencies]
 clap = { version = "4.1.13", features = ["derive"] }
 env_logger = "0.10.0"
+gl = "0.14.0"
+home = "0.5.4"
 log = "0.4.17"
-serde = "1.0.158"
+sdl2 = "0.35.2"
+serde = { version = "1.0.158", features = ["derive"] }
 serde_yaml = "0.9.19"

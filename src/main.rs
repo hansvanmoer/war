@@ -13,20 +13,31 @@
  *
  */
 
+mod engine;
+mod graphics;
 mod settings;
 
-use settings::Settings;
+use crate::engine::Engine;
+use crate::settings::Settings;
+
+use log::{debug, info};
 
 ///
 /// Main application entry point
 ///
 fn main() {
-    let _settings = match Settings::load() {
-	Ok(s) => s,
-	Err(e) => {
-	    println!("Could not load setting: {:?}", e);
-	    Settings::default()
-	},
-    };
+
+    env_logger::init();
+    info!("application started");
+    
+    // load settings
+    let settings = Settings::load();
+    debug!("settings loaded: {:?}", settings);
+
+    let engine = Engine::new().expect("could not initialize engine subsystem");
+    debug!("engine loaded");
+
+    let _graphics = engine.create_graphics(&settings).expect("could not initialize graphics subsystem");
+    debug!("graphics subsystem loaded");
 }
 

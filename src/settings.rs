@@ -13,7 +13,14 @@
  *
  */
 
-use clap::{Parser, ValueEnum};
+use clap::Parser;
+use log::{info, warn};
+use serde::{Deserialize, Serialize};
+
+use std::fs::File;
+use std::io::Read;
+use log::debug;
+use std::path::PathBuf;
 
 ///
 /// Models application settings
@@ -21,9 +28,17 @@ use clap::{Parser, ValueEnum};
 #[derive(Debug, PartialEq)]
 pub struct Settings {
     ///
-    /// The log level
+    /// The data path contains all the static application data
     ///
-    log_level: LogLevel,
+    data_path: PathBuf,
+    ///
+    /// The window width in pixels
+    ///
+    window_width: u32,
+    ///
+    /// The window height in pixels
+    ///
+    window_height: u32,
 }
 
 impl Settings {
@@ -31,21 +46,145 @@ impl Settings {
     /// Loads the default settings and then applies configurations specified
     /// in the configuration files and on the command line (in that order) on top of that
     ///
-    pub fn load() -> Result<Settings, Error> {
+    pub fn load() -> Settings {
 	let mut settings = Settings::default();
-	settings.apply_command_line_arguments()?;
-	Ok(settings)
+	settings.apply_file();
+	settings.apply_command_line_arguments();
+	settings
     }
 
     ///
+    /// Returns the window width in pixels
+    ///
+    pub fn window_width(&self) -> u32 {
+	self.window_width
+    }
+
+    ///
+    /// Returns the window width in pixels
+    ///
+    pub fn window_height(&self) -> u32 {
+	self.window_height
+    }
+    
+    ///
     /// Applies the command line arguments to the settings
     ///
-    fn apply_command_line_arguments(&mut self) -> Result<(), Error> {
-	let cli_settings = CLISettingsConfiguration::parse();
-	if let Some(log_level) = cli_settings.log_level {
-	    self.log_level = log_level;
+    fn apply_command_line_arguments(&mut self) {
+	let config = CLISettingsConfiguration::parse();
+	if let Some(data_path) = config.data_path {
+	    self.data_path = data_path;
 	}
-	Ok(())
+	if let Some(window_width) = config.window_width {
+	    self.window_width = window_width;
+	}
+	if let Some(window_height) = config.window_height {
+	    self.window_height = window_height;
+	}
+    }
+
+    ///
+    /// Tries to find a settings file and applies it to the settings
+    ///
+    fn apply_file(&mut self) {
+	match Settings::find_settings_file() {
+	    Some(path) => {
+		let mut buffer = String::new();
+		match File::open(path.clone()) {
+		    Ok(mut file) => {
+			match file.read_to_string(&mut buffer) {
+			    Ok(_) => {
+				match serde_yaml::from_str::<FileSettingsConfiguration>(&buffer) {
+				    Ok(config) => {
+					if let Some(data_path) = config.data_path {
+					    self.data_path = data_path;
+					};
+					self.window_width = config.window_width;
+					self.window_height = config.window_height;
+				    },
+				    Err(e) => {
+					warn!("could not read settings file ({:?}): {:?}", path, e);
+				    }
+				}
+			    },
+			    Err(e) => {
+				warn!("could not read settings file ({:?}): {:?}", path, e);
+			    }
+			}
+		    },
+		    Err(e) => {
+			warn!("could not open settings file ({:?}): {:?}", path, e);
+		    }   
+		}
+	    },
+	    None => {
+		info!("settings file not found");
+	    }
+	}
+    }
+
+    ///
+    /// Checks whether the path is the data directory
+    ///
+    fn is_data_dir(path: &mut PathBuf) -> bool {
+	path.push(".data-dir");
+	let result = path.is_file();
+	path.pop();
+	result
+    }
+    
+    ///
+    /// Finds the data directory, containing all immutable data
+    ///
+    fn find_data_dir() -> Option<PathBuf> {
+	debug!("trying to find data path");
+	let mut path = std::env::current_dir().unwrap_or_else(|_| PathBuf::new());
+	loop {
+	    path.push("data");
+	    debug!("trying x{:?}", path);
+	    if Settings::is_data_dir(&mut path) {
+		debug!("found data path: '{:?}'", path);
+		return Some(path);
+	    }
+	    path.pop();
+	    if !path.pop() {
+		return None;
+	    }
+	}
+    }
+
+    ///
+    /// Finds the user data path, containing all mutable user specific data
+    ///
+    fn find_user_data_dir() -> Option<PathBuf> {
+	match home::home_dir() {
+	    Some(mut path) => {
+		path.push(".hundredyearswar");
+		if path.is_dir() {
+		    Some(path)
+		} else {
+		    None
+		}
+	    },
+	    None => None
+	}
+    }
+    
+    ///
+    /// Tries to find the settings file
+    ///
+    fn find_settings_file() -> Option<PathBuf> {
+	match Settings::find_user_data_dir() {
+	    Some(mut path) => {
+		path.push("settings.yaml");
+		if path.is_file() {
+		    Some(path)
+		} else {
+		    None
+		}
+	    },
+	    None => None,
+	}
     }
 }
 
@@ -55,39 +194,12 @@ impl Default for Settings {
     ///
     fn default() -> Settings {
 	Settings {
-	    log_level: LogLevel::Warning,
+	    data_path: Settings::find_data_dir().unwrap_or_else(PathBuf::new),
+	    window_width: 800,
+	    window_height: 600,
 	}
     }
 }
-
-///
-/// Models the log level of the application
-///
-#[derive(Clone, Debug, PartialEq, ValueEnum)]
-pub enum LogLevel {
-    ///
-    /// Debug messages get printed
-    ///
-    Debug,
-    ///
-    /// Info messages get printed
-    ///
-    Info,
-    ///
-    /// Non fatal errors get printed
-    ///
-    Warning,
-    ///
-    /// Fatal or serious errors get printed
-    ///
-    Error,
-}
-
-///
-/// Errors that can occur loading or saving settings
-///
-#[derive(Debug, PartialEq)]
-pub enum Error {}
 
 ///
 /// The command line settings model
@@ -96,8 +208,35 @@ pub enum Error {}
 #[command(author, version, about, long_about = None)]
 pub struct CLISettingsConfiguration {
     ///
-    /// The log level
+    /// The data path
     ///
-    #[arg(short, long, value_name = "LOG LEVEL")]
-    log_level: Option<LogLevel>,
+    #[arg(short, long)]
+    data_path: Option<PathBuf>,
+    ///
+    /// The window width in pixels
+    ///
+    window_width: Option<u32>,
+    ///
+    /// The window height in pixels
+    ///
+    window_height: Option<u32>,
+}
+
+///
+/// The settings file model
+///
+#[derive(Deserialize, Serialize)]
+pub struct FileSettingsConfiguration {
+    ///
+    /// The data path
+    ///
+    data_path: Option<PathBuf>,
+    ///
+    /// The window width in pixels
+    ///
+    window_width: u32,
+    ///
+    /// The window height in pixels
+    ///
+    window_height: u32,
 }
