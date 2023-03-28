@@ -14,9 +14,11 @@
  */
 
 use crate::settings::Settings;
+use super::shader::ShaderKind;
 
 use sdl2::VideoSubsystem;
 use sdl2::video::{GLContext, Window, WindowBuildError};
+use serde::Deserialize;
 
 ///
 /// The graphics subsystem
@@ -33,7 +35,7 @@ impl Graphics {
     pub fn new(video: &VideoSubsystem, settings: &Settings) -> Result<Graphics, Error> {
 	let window = video.window("The Hundred Years War", settings.window_width(), settings.window_height())
 	    .build()?;
-	let gl_context = window.gl_create_context().map_err(|msg| Error::CreateContext(msg))?;
+	let gl_context = window.gl_create_context().map_err(|msg| Error::Sdl(msg))?;
 	gl::load_with(|s| video.gl_get_proc_address(s) as *const std::os::raw::c_void);
 	Ok(Graphics {
 	    _window: window,
@@ -62,11 +64,7 @@ pub enum Error {
     /// 
     /// An SDL error occurred when the window was created
     ///
-    CreateWindow(String),
-    ///
-    /// An error happened when the OpenGL context was created
-    ///
-    CreateContext(String),
+    Sdl(String),
 }
 
 impl From<WindowBuildError> for Error {
@@ -78,7 +76,55 @@ impl From<WindowBuildError> for Error {
 	    WindowBuildError::HeightOverflows(_) => Error::BadWindowHeight,
 	    WindowBuildError::WidthOverflows(_) => Error::BadWindowWidth,
 	    WindowBuildError::InvalidTitle(_) => Error::BadWindowTitle,
-	    WindowBuildError::SdlError(msg) => Error::CreateWindow(msg),
+	    WindowBuildError::SdlError(msg) => Error::Sdl(msg),
 	}
     }
+}
+
+///
+/// Models the graphics pipeline configuration file
+///
+#[derive(Deserialize)]
+struct GraphicsConfiguration {
+    ///
+    /// The shaders
+    ///
+    shaders: Vec<ShaderConfiguration>,
+    
+    ///
+    /// The programs
+    ///
+    programs: Vec<ProgramConfiguration>,
+}
+
+///
+/// Models a single program's configuration
+///
+#[derive(Deserialize)]
+struct ProgramConfiguration {
+    ///
+    /// The program's unique name
+    ///
+    name: String,
+
+    ///
+    /// The names of the attached shaders
+    ///
+    shaders: Vec<String>,
+}
+
+///
+/// A shader's configuration
+///
+#[derive(Deserialize)]
+struct ShaderConfiguration {
+    ///
+    /// The shader's unique name
+    ///
+    name: String,
+
+    ///
+    /// The kind of shader
+    ///
+    kind: ShaderKind,
 }
