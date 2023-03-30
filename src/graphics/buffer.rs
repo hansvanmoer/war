@@ -1,4 +1,7 @@
+use std::path::PathBuf;
+
 use gl::types::GLuint;
+use serde::Deserialize;
 
 ///
 /// A vertex buffer
@@ -26,7 +29,7 @@ impl IndexedTriangles {
     ///
     /// Creates a new vertex buffer
     ///
-    pub fn new(values: Vec<f32>, vertex_len: usize, color_len: usize, indices: Vec<usize>) -> Result<IndexedTriangles, Error> {
+    pub fn new(values: &Vec<f32>, vertex_len: usize, color_len: usize, indices: &Vec<usize>) -> Result<IndexedTriangles, Error> {
 	IndexedTriangles::validate(&values, vertex_len, color_len, &indices)?;
 
 	let mut vertex_buffer_id: GLuint = 0;
@@ -74,6 +77,19 @@ impl IndexedTriangles {
 	    index_buffer_id,
 	    len: indices.len(),
 	})
+    }
+
+    ///
+    /// Loads a new buffer from the specified path
+    ///
+    pub fn load(path: &PathBuf) -> Result<IndexedTriangles, Error> {
+	let model: IndexedTrianglesConfiguration = crate::configuration::load(path)?;
+	IndexedTriangles::new(
+	    &model.vertices,
+	    model.values_per_vertex,
+	    model.values_per_color.unwrap_or(0),
+	    &model.indices
+	)
     }
 
     ///
@@ -134,4 +150,40 @@ pub enum Error {
     /// An invalid index was found
     ///
     BadIndex,
+    ///
+    /// A configuration error occurred
+    ///
+    Configuration(crate::configuration::Error),
+}
+
+impl From<crate::configuration::Error> for Error {
+    ///
+    /// Converts a configuration error to a buffer error
+    ///
+    fn from(e: crate::configuration::Error) -> Error {
+	Error::Configuration(e)
+    }
+}
+
+///
+/// A configuration model for indexed triangles
+///
+#[derive(Deserialize)]
+struct IndexedTrianglesConfiguration {
+    ///
+    /// The number of values per vertex
+    ///
+    values_per_vertex: usize,
+    ///
+    /// the number of values per color
+    ///
+    values_per_color: Option<usize>,
+    ///
+    /// The vertices
+    ///
+    vertices: Vec<f32>,
+    ///
+    /// The indices
+    ///
+    indices: Vec<usize>,
 }

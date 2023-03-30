@@ -14,6 +14,7 @@
  */
 
 use crate::settings::Settings;
+use crate::graphics::buffer::IndexedTriangles;
 use crate::graphics::program::{Program, ProgramBuilder};
 use crate::graphics::shader::{Shader, ShaderKind};
 
@@ -33,6 +34,8 @@ pub struct Graphics {
     _gl_context: GLContext,
     _programs: Vec<Program>,
     _programs_by_name: HashMap<String, usize>,
+    _buffers: Vec<IndexedTriangles>,
+    _buffers_by_name: HashMap<String, usize>,
 }
 
 impl Graphics {
@@ -44,13 +47,26 @@ impl Graphics {
 	    .build()?;
 	let gl_context = window.gl_create_context().map_err(|msg| Error::Sdl(msg))?;
 	gl::load_with(|s| video.gl_get_proc_address(s) as *const std::os::raw::c_void);
+
+	let mut path = settings.create_data_path();
+	path.push("graphics.yaml");
+	let config: GraphicsConfiguration = crate::configuration::load(&path)?;
+	path.pop();
 	
 	let mut programs = Vec::new();
 	let mut programs_by_name = HashMap::new();
-	for (name, program) in Graphics::load_programs(settings)?.drain() {
+	for (name, program) in Graphics::load_programs(&mut path, &config)?.drain() {
 	    let id = programs.len();
 	    programs.push(program);
 	    programs_by_name.insert(name, id);
+	}
+
+	let mut buffers = Vec::new();
+	let mut buffers_by_name = HashMap::new();
+	for (name, buffer) in Graphics::load_buffers(&mut path, &config)?.drain() {
+	    let id = buffers.len();
+	    buffers.push(buffer);
+	    buffers_by_name.insert(name, id);
 	}
 	
 	Ok(Graphics {
@@ -58,18 +74,16 @@ impl Graphics {
 	    _gl_context: gl_context,
 	    _programs: programs,
 	    _programs_by_name: programs_by_name,
+	    _buffers: buffers,
+	    _buffers_by_name: buffers_by_name,
 	})
     }
 
     ///
     /// Loads the graphics pipelines
     ///
-    fn load_programs(settings: &Settings) -> Result<HashMap<String, Program>, Error> {
-	let mut path = settings.create_data_path();
-	path.push("graphics.yaml");
-	let config: GraphicsConfiguration = crate::configuration::load(&path)?;
-	path.pop();
-	let shaders = Graphics::load_shaders(&mut path, &config)?;
+    fn load_programs(path: &mut PathBuf, config: &GraphicsConfiguration) -> Result<HashMap<String, Program>, Error> {
+	let shaders = Graphics::load_shaders(path, &config)?;
 	let mut programs = HashMap::new();
 	for (name, program_config) in config.programs.iter() {
 	    let mut builder = ProgramBuilder::new()?;
@@ -81,15 +95,34 @@ impl Graphics {
 	Ok(programs)
     }
 
+    ///
+    /// Loads the shaders
+    ///
     fn load_shaders(path: &mut PathBuf, config: &GraphicsConfiguration) -> Result<HashMap<String, Rc<Shader>>, Error> {
 	path.push("shaders");
 	let mut result = HashMap::with_capacity(config.shaders.len());
 	for (name, shader_config) in config.shaders.iter() {
 	    path.push(name);
-	    let shader = Rc::from(Shader::load(&path, shader_config.kind.clone())?);
+	    let shader = Rc::from(Shader::load(path, shader_config.kind.clone())?);
 	    path.pop();
 	    result.insert(name.clone(), shader);
 	}
+	path.pop();
+	Ok(result)
+    }
+
+    ///
+    /// Loads the vertex buffers
+    ///
+    fn load_buffers(path: &mut PathBuf, config: &GraphicsConfiguration) -> Result<HashMap<String, IndexedTriangles>, Error> {
+	path.push("buffers");
+	let mut result = HashMap::new();
+	for name in config.buffers.iter() {
+	    path.push(format!("{}.yaml", name));
+	    result.insert((*name).clone(), IndexedTriangles::load(&path)?);
+	    path.pop();
+	}
+	path.pop();
 	Ok(result)
     }
 }
@@ -131,6 +164,10 @@ pub enum Error {
     /// Program error
     ///
     Program(crate::graphics::program::Error),
+    ///
+    /// Buffer error
+    ///
+    Buffer(crate::graphics::buffer::Error),
 }
 
 impl From<WindowBuildError> for Error {
@@ -174,6 +211,15 @@ impl From<crate::graphics::program::Error> for Error {
     }
 }
 
+impl From<crate::graphics::buffer::Error> for Error {
+    ///
+    /// Converts a vertex buffer error into a graphics error
+    ///
+    fn from(e: crate::graphics::buffer::Error) -> Error {
+	Error::Buffer(e)
+    }
+}
+
 ///
 /// Models the graphics pipeline configuration file
 ///
@@ -188,6 +234,11 @@ struct GraphicsConfiguration {
     /// The programs
     ///
     programs: HashMap<String, ProgramConfiguration>,
+
+    ///
+    /// The buffers
+    ///
+    buffers: Vec<String>,
 }
 
 ///
