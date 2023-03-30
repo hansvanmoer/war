@@ -92,15 +92,19 @@ impl Shader {
 
     ///
     /// Attaches the shader to a program
-    /// The caller is supposed to keep the result in scope until it has to be detached
     ///
-    pub fn attach(self, program_id: GLuint) -> AttachedShader {
+    pub fn attach(&self, program_id: GLuint) {
 	unsafe {
 	    gl::AttachShader(program_id, self.id);
 	}
-	AttachedShader {
-	    program_id,
-	    shader_id: self.id,
+    }
+
+    ///
+    /// Detaches the shader from a program
+    ///
+    pub fn detach(&self, program_id: GLuint) {
+	unsafe {
+	    gl::DetachShader(program_id, self.id);
 	}
     }
     
@@ -117,50 +121,10 @@ impl Drop for Shader {
     }
 }
 
-pub struct AttachedShader {
-    ///
-    /// The program ID
-    ///
-    program_id: GLuint,
-    ///
-    /// The shader ID
-    ///
-    shader_id: GLuint,
-}
-
-impl AttachedShader {
-    ///
-    /// Detaches the shader
-    ///
-    pub fn detach(self) -> Shader {
-	unsafe {
-	    gl::DetachShader(self.program_id, self.shader_id);
-	}
-	Shader {
-	    id: self.shader_id,
-	}
-    }
-}
-
-///
-///  
-///
-impl Drop for AttachedShader {
-    ///
-    /// Releases the resources associated with the shader
-    ///
-    fn drop(&mut self) {
-	unsafe {
-	    gl::DetachShader(self.program_id, self.shader_id);
-	    gl::DeleteShader(self.shader_id);
-	}
-    }
-}
-
-///
+///x
 /// The type of shader
 ///
-#[derive(Deserialize)]
+#[derive(Clone, Deserialize)]
 pub enum ShaderKind {
     ///
     /// A vertex shader

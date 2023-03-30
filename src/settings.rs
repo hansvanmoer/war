@@ -54,6 +54,13 @@ impl Settings {
     }
 
     ///
+    /// Creates a buffer containing the data path
+    ///
+    pub fn create_data_path(&self) -> PathBuf {
+	self.data_path.clone()
+    }
+    
+    ///
     /// Returns the window width in pixels
     ///
     pub fn window_width(&self) -> u32 {

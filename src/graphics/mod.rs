@@ -13,6 +13,7 @@
  *
  */
 
+mod buffer;
 mod graphics;
 mod program;
 mod shader;

@@ -13,9 +13,12 @@
  *
  */
 
-use super::shader::{AttachedShader, Shader};
+use super::shader::Shader;
+
+use std::rc::Rc;
 
 use gl::types::GLuint;
+
 
 ///
 /// An OpenGL  program
@@ -25,6 +28,17 @@ pub struct Program {
     /// The OpenGL ID fo the program
     ///
     id: GLuint,
+}
+
+impl Program {
+    ///
+    /// Uses a program
+    ///
+    pub fn run(&self) {
+	unsafe {
+	    gl::UseProgram(self.id);
+	}
+    }
 }
 
 impl Drop for Program {
@@ -49,7 +63,7 @@ pub struct ProgramBuilder {
     ///
     /// Attached shaders
     ///
-    shaders: Vec<AttachedShader>,
+    shaders: Vec<Rc<Shader>>,
 }
 
 impl ProgramBuilder {
@@ -73,22 +87,22 @@ impl ProgramBuilder {
     ///
     /// Takes ownership of the shader and attaches it to the program
     ///
-    pub fn attach(&mut self, shader: Shader) {
-	self.shaders.push(shader.attach(self.program_id));
+    pub fn attach(&mut self, shader: Rc<Shader>) {
+	shader.attach(self.program_id);
+	self.shaders.push(shader);
     }
 
     ///
     /// Links the program and releases ownership of attached shaders
     ///
-    pub fn link(mut self) -> (Program, Vec<Shader>) {
+    pub fn link(mut self) -> Program {
 	unsafe {
 	    gl::LinkProgram(self.program_id);
 	}
-	let shaders = self.shaders.drain(..).map(AttachedShader::detach).collect();
-	let program = Program {
+	self.shaders.drain(..).for_each(|s| s.detach(self.program_id));
+	Program {
 	    id: self.program_id,
-	};
-	(program, shaders)
+	}
     }
 }
 
@@ -98,6 +112,7 @@ impl Drop for ProgramBuilder {
     /// Attached shaders will be dropped automatically
     ///
     fn drop(&mut self) {
+	self.shaders.drain(..).for_each(|s| s.detach(self.program_id));
 	unsafe {
 	    gl::DeleteProgram(self.program_id);
 	}
@@ -107,6 +122,7 @@ impl Drop for ProgramBuilder {
 ///
 /// Errors that can occur when a program is created
 ///
+#[derive(Debug)]
 pub enum Error {
     ///
     /// An openGL error happened when creating the program

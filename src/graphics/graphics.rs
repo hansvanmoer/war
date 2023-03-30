@@ -14,7 +14,12 @@
  */
 
 use crate::settings::Settings;
-use super::shader::ShaderKind;
+use crate::graphics::program::{Program, ProgramBuilder};
+use crate::graphics::shader::{Shader, ShaderKind};
+
+use std::collections::HashMap;
+use std::path::PathBuf;
+use std::rc::Rc;
 
 use sdl2::VideoSubsystem;
 use sdl2::video::{GLContext, Window, WindowBuildError};
@@ -26,6 +31,8 @@ use serde::Deserialize;
 pub struct Graphics {
     _window: Window,
     _gl_context: GLContext,
+    _programs: Vec<Program>,
+    _programs_by_name: HashMap<String, usize>,
 }
 
 impl Graphics {
@@ -37,10 +44,53 @@ impl Graphics {
 	    .build()?;
 	let gl_context = window.gl_create_context().map_err(|msg| Error::Sdl(msg))?;
 	gl::load_with(|s| video.gl_get_proc_address(s) as *const std::os::raw::c_void);
+	
+	let mut programs = Vec::new();
+	let mut programs_by_name = HashMap::new();
+	for (name, program) in Graphics::load_programs(settings)?.drain() {
+	    let id = programs.len();
+	    programs.push(program);
+	    programs_by_name.insert(name, id);
+	}
+	
 	Ok(Graphics {
 	    _window: window,
 	    _gl_context: gl_context,
+	    _programs: programs,
+	    _programs_by_name: programs_by_name,
 	})
+    }
+
+    ///
+    /// Loads the graphics pipelines
+    ///
+    fn load_programs(settings: &Settings) -> Result<HashMap<String, Program>, Error> {
+	let mut path = settings.create_data_path();
+	path.push("graphics.yaml");
+	let config: GraphicsConfiguration = crate::configuration::load(&path)?;
+	path.pop();
+	let shaders = Graphics::load_shaders(&mut path, &config)?;
+	let mut programs = HashMap::new();
+	for (name, program_config) in config.programs.iter() {
+	    let mut builder = ProgramBuilder::new()?;
+	    for shader_name in program_config.shaders.iter() {
+		builder.attach(shaders.get(shader_name).ok_or_else(|| Error::NoShader((*shader_name).clone()))?.clone());
+	    }
+	    programs.insert((*name).clone(), builder.link());
+	}
+	Ok(programs)
+    }
+
+    fn load_shaders(path: &mut PathBuf, config: &GraphicsConfiguration) -> Result<HashMap<String, Rc<Shader>>, Error> {
+	path.push("shaders");
+	let mut result = HashMap::with_capacity(config.shaders.len());
+	for (name, shader_config) in config.shaders.iter() {
+	    path.push(name);
+	    let shader = Rc::from(Shader::load(&path, shader_config.kind.clone())?);
+	    path.pop();
+	    result.insert(name.clone(), shader);
+	}
+	Ok(result)
     }
 }
 
@@ -65,6 +115,22 @@ pub enum Error {
     /// An SDL error occurred when the window was created
     ///
     Sdl(String),
+    ///
+    /// Configuration error
+    ///
+    Configuration(crate::configuration::Error),
+    ///
+    /// Shader not loaded
+    ///
+    NoShader(String),
+    ///
+    /// Shader error
+    ///
+    Shader(crate::graphics::shader::Error),
+    ///
+    /// Program error
+    ///
+    Program(crate::graphics::program::Error),
 }
 
 impl From<WindowBuildError> for Error {
@@ -81,6 +147,33 @@ impl From<WindowBuildError> for Error {
     }
 }
 
+impl From<crate::configuration::Error> for Error {
+    ///
+    /// Converts a configuration error into a graphics error
+    ///
+    fn from(e: crate::configuration::Error) -> Error {
+	Error::Configuration(e)
+    }
+}
+
+impl From<crate::graphics::shader::Error> for Error {
+    ///
+    /// Converts a shader error into a graphics error
+    ///
+    fn from(e: crate::graphics::shader::Error) -> Error {
+	Error::Shader(e)
+    }
+}
+
+impl From<crate::graphics::program::Error> for Error {
+    ///
+    /// Converts a program error into a graphics error
+    ///
+    fn from(e: crate::graphics::program::Error) -> Error {
+	Error::Program(e)
+    }
+}
+
 ///
 /// Models the graphics pipeline configuration file
 ///
@@ -89,12 +182,12 @@ struct GraphicsConfiguration {
     ///
     /// The shaders
     ///
-    shaders: Vec<ShaderConfiguration>,
+    shaders: HashMap<String, ShaderConfiguration>,
     
     ///
     /// The programs
     ///
-    programs: Vec<ProgramConfiguration>,
+    programs: HashMap<String, ProgramConfiguration>,
 }
 
 ///
@@ -102,11 +195,6 @@ struct GraphicsConfiguration {
 ///
 #[derive(Deserialize)]
 struct ProgramConfiguration {
-    ///
-    /// The program's unique name
-    ///
-    name: String,
-
     ///
     /// The names of the attached shaders
     ///
@@ -118,11 +206,6 @@ struct ProgramConfiguration {
 ///
 #[derive(Deserialize)]
 struct ShaderConfiguration {
-    ///
-    /// The shader's unique name
-    ///
-    name: String,
-
     ///
     /// The kind of shader
     ///
