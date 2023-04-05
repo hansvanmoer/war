@@ -13,12 +13,15 @@
  *
  */
 
-use super::shader::Shader;
+use crate::graphics::shader::{Shader, ShaderKind};
+use crate::resource::Resources;
 
+use std::collections::HashMap;
+use std::path::PathBuf;
 use std::rc::Rc;
 
 use gl::types::GLuint;
-
+use serde::Deserialize;
 
 ///
 /// An OpenGL  program
@@ -39,6 +42,29 @@ impl Program {
 	    gl::UseProgram(self.id);
 	}
     }
+
+    ///
+    /// Loads a set of programs
+    ///
+    pub fn load_from_config(path: &mut PathBuf) -> Result<Resources<Program>, Error> {
+	let mut config: ProgramAndShaderConfiguration = crate::configuration::load(path)?;
+	path.pop();
+	let mut shaders = HashMap::new();
+	for (name, shader) in config.shaders.drain() {
+	    path.push(&name);
+	    shaders.insert(name, Rc::from(Shader::load(path, shader.kind)?));
+	    path.pop();
+	}
+	let mut programs = Resources::new();
+	for (name, program) in config.programs.drain() {
+	    let mut builder = ProgramBuilder::new()?;
+	    for shader_name in program.shaders.iter() {
+		builder.attach(shaders.get(shader_name).ok_or(Error::NoShader((*shader_name).clone()))?.clone());
+	    }
+	    programs.insert(name, builder.link())?;
+	}
+	Ok(programs)
+    }
 }
 
 impl Drop for Program {
@@ -55,7 +81,7 @@ impl Drop for Program {
 ///
 /// A program builder
 ///
-pub struct ProgramBuilder {
+struct ProgramBuilder {
     ///
     /// The program under construction
     ///
@@ -128,4 +154,84 @@ pub enum Error {
     /// An openGL error happened when creating the program
     ///
     CreateProgram,
+    ///
+    /// No shader found for the specified name
+    ///
+    NoShader(String),
+    ///
+    /// A resource error occurred
+    ///
+    Resource(crate::resource::Error),
+    ///
+    /// A configuration error occurred
+    ///
+    Configuration(crate::configuration::Error),
+    ///
+    /// A shader error occurred
+    ///
+    Shader(crate::graphics::shader::Error),
+}
+
+impl From<crate::resource::Error> for Error {
+    ///
+    /// Converts a resource error into a program error
+    ///
+    fn from(e: crate::resource::Error) -> Error {
+	Error::Resource(e)
+    }
+}
+
+impl From<crate::configuration::Error> for Error {
+    ///
+    /// Converts a configuration error into a program error
+    ///
+    fn from(e: crate::configuration::Error) -> Error {
+	Error::Configuration(e)
+    }
+}
+
+impl From<crate::graphics::shader::Error> for Error {
+    ///
+    /// Converts a shader error into a program error
+    ///
+    fn from(e: crate::graphics::shader::Error) -> Error {
+	Error::Shader(e)
+    }
+}
+
+///
+/// Program and shader configuration
+///
+#[derive(Deserialize)]
+struct ProgramAndShaderConfiguration {
+    ///
+    /// Shaders
+    ///
+    shaders: HashMap<String, ShaderConfiguration>,
+    ///
+    /// Programs
+    ///
+    programs: HashMap<String, ProgramConfiguration>,
+}
+
+///
+/// Models a single program's configuration
+///
+#[derive(Deserialize)]
+struct ProgramConfiguration {
+    ///
+    /// The names of the attached shaders
+    ///
+    shaders: Vec<String>,
+}
+
+///
+/// A shader's configuration
+///
+#[derive(Deserialize)]
+struct ShaderConfiguration {
+    ///
+    /// The kind of shader
+    ///
+    kind: ShaderKind,
 }

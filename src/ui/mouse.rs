@@ -12,38 +12,3 @@
  * along with 'The Hundred Years War'. If not, see <https://www.gnu.org/licenses/>. 
  *
  */
-
-mod arena;
-mod bounds;
-mod configuration;
-mod dimension;
-mod engine;
-mod graphics;
-mod position;
-mod resource;
-mod settings;
-mod ui;
-
-use crate::engine::Engine;
-use crate::settings::Settings;
-
-use log::{debug, info};
-
-///
-/// Main application entry point
-///
-fn main() {
-
-    env_logger::init();
-    info!("application started");
-    
-    // load settings
-    let settings = Settings::load();
-    debug!("settings loaded: {:?}", settings);
-
-    let engine = Engine::new().expect("could not initialize engine subsystem");
-    debug!("engine loaded");
-
-    let _graphics = engine.create_graphics(&settings).expect("could not initialize graphics subsystem");
-    debug!("graphics subsystem loaded");
-}

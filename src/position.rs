@@ -13,37 +13,41 @@
  *
  */
 
-mod arena;
-mod bounds;
-mod configuration;
-mod dimension;
-mod engine;
-mod graphics;
-mod position;
-mod resource;
-mod settings;
-mod ui;
-
-use crate::engine::Engine;
-use crate::settings::Settings;
-
-use log::{debug, info};
-
 ///
-/// Main application entry point
+/// A 2D position
 ///
-fn main() {
+pub struct Position {
+    ///
+    /// The x coordinate
+    ///
+    pub x: f32,
 
-    env_logger::init();
-    info!("application started");
-    
-    // load settings
-    let settings = Settings::load();
-    debug!("settings loaded: {:?}", settings);
+    ///
+    /// The y coordinate
+    ///
+    pub y: f32,
+}
 
-    let engine = Engine::new().expect("could not initialize engine subsystem");
-    debug!("engine loaded");
+impl Position {
+    ///
+    /// Creates a new position
+    ///
+    pub fn new(x: f32, y: f32) -> Position {
+	Position {
+	    x,
+	    y,
+	}
+    }
+}
 
-    let _graphics = engine.create_graphics(&settings).expect("could not initialize graphics subsystem");
-    debug!("graphics subsystem loaded");
+impl Default for Position {
+    ///
+    /// Creates a new position at the origin
+    ///
+    fn default() -> Position {
+	Position {
+	    x: 0.0,
+	    y: 0.0,
+	}
+    }
 }

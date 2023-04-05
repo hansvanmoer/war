@@ -13,37 +13,51 @@
  *
  */
 
-mod arena;
-mod bounds;
-mod configuration;
-mod dimension;
-mod engine;
-mod graphics;
-mod position;
-mod resource;
-mod settings;
-mod ui;
-
-use crate::engine::Engine;
-use crate::settings::Settings;
-
-use log::{debug, info};
-
 ///
-/// Main application entry point
+/// A 2D size tuple
 ///
-fn main() {
+pub struct Dimension {
+    ///
+    /// The width, always positive
+    ///
+    width: f32,
 
-    env_logger::init();
-    info!("application started");
-    
-    // load settings
-    let settings = Settings::load();
-    debug!("settings loaded: {:?}", settings);
+    ///
+    /// The height, always positive
+    ///
+    height: f32,
+}
 
-    let engine = Engine::new().expect("could not initialize engine subsystem");
-    debug!("engine loaded");
+impl Dimension {
+    ///
+    /// Creates a new dimension
+    ///
+    pub fn new(width: f32, height: f32) -> Dimension {
+	let width = if width < 0.0 {
+	    - width
+	} else {
+	    width
+	};
+	let height = if height < 0.0 {
+	    - height
+	} else {
+	    height
+	};
+	Dimension {
+	    width,
+	    height,
+	}
+    }
+}
 
-    let _graphics = engine.create_graphics(&settings).expect("could not initialize graphics subsystem");
-    debug!("graphics subsystem loaded");
+impl Default for Dimension {
+    ///
+    /// Creates a new zero sized dimension
+    ///
+    fn default() -> Dimension {
+	Dimension {
+	    width: 0.0,
+	    height: 0.0,
+	}
+    }
 }

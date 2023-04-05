@@ -1,3 +1,5 @@
+use crate::resource::Resources;
+
 use std::path::PathBuf;
 
 use gl::types::GLuint;
@@ -93,6 +95,20 @@ impl IndexedTriangles {
     }
 
     ///
+    /// Loads buffers from a specified config file
+    ///
+    pub fn load_from_config(path: &mut PathBuf) -> Result<Resources<IndexedTriangles>, Error> {
+	let mut names: Vec<String> = crate::configuration::load(path)?;
+	let mut resources = Resources::new();
+	for name in names.drain(..) {
+	    path.push(&name);
+	    resources.insert_from(name, || IndexedTriangles::load(path))?;
+	    path.pop();
+	}
+	Ok(resources)
+    }
+
+    ///
     /// Draws the buffer
     ///
     pub fn draw(&self) {
@@ -154,6 +170,10 @@ pub enum Error {
     /// A configuration error occurred
     ///
     Configuration(crate::configuration::Error),
+    ///
+    /// A resource error occurred
+    ///
+    Resource(crate::resource::Error),
 }
 
 impl From<crate::configuration::Error> for Error {
@@ -162,6 +182,15 @@ impl From<crate::configuration::Error> for Error {
     ///
     fn from(e: crate::configuration::Error) -> Error {
 	Error::Configuration(e)
+    }
+}
+
+impl From<crate::resource::Error> for Error {
+    ///
+    /// Converts a resource error to a buffer error
+    ///
+    fn from(e: crate::resource::Error) -> Error {
+	Error::Resource(e)
     }
 }
 
