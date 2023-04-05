@@ -20,6 +20,9 @@ use crate::ui::dialog::Dialog;
 use crate::ui::mouse::{MouseButtonTarget, MouseMotionTarget};
 use crate::ui::spatial::Spatial;
 
+use std::collections::LinkedList;
+use std::rc::Rc;
+
 ///
 /// Manages the widgets and their component
 ///
@@ -32,7 +35,7 @@ pub struct Manager {
     ///
     /// All buttons
     ///
-    buttons: Area<Button>,
+    buttons: Arena<Button>,
     
     ///
     /// All widgets that can contain other widgets
@@ -120,6 +123,15 @@ pub struct WidgetBuilder<'a> {
     widget_id: WidgetId,
 }
 
+impl<'a> WidgetBuilder<'a> {
+    ///
+    /// Gets the ID of the widget under construction
+    ///
+    pub fn widget_id(&self) -> WidgetId {
+	self.widget_id
+    }
+}
+
 ///
 /// A context for widget and component actions
 ///
@@ -145,7 +157,7 @@ impl<'a> Context<'a> {
     /// Schedules an action
     ///
     pub fn schedule(&mut self, target_id: WidgetId, action: Rc<dyn Action>) {
-	self.actions.push_back(ScheduledActions {
+	self.actions.push_back(ScheduledAction {
 	    source_id: self.widget_id,
 	    target_id: target_id,
 	    action,
@@ -162,7 +174,7 @@ impl<'a> Context<'a> {
     ///
     /// The ID of the widget currently being acted upon
     ///
-    fn widget_id(&self) -> WidgetId {
+    pub fn widget_id(&self) -> WidgetId {
 	self.widget_id
     }
 }
@@ -234,6 +246,15 @@ pub struct Listeners {
 
 impl Listeners {
     ///
+    /// Creates a new set of listeners
+    ///
+    pub fn new() -> Listeners {
+	Listeners {
+	    listeners: Arena::new(),
+	}
+    }
+
+    ///
     /// Triggers the listeners
     ///
     pub fn notify<'a>(&self, context: &mut Context<'a>) {
@@ -245,9 +266,9 @@ impl Listeners {
     ///
     pub fn add(&mut self, widget_id: WidgetId, action: Rc<dyn Action>) -> ListenerId {
 	self.listeners.insert(Listener {
-	    id,
+	    id: widget_id,
 	    target_id: widget_id,
-	    actions,
+	    action,
 	})
     }
 
@@ -280,43 +301,63 @@ macro_rules! define_component {
 	    ///
 	    /// Adds a $type to the widget
 	    ///
-	    pub fn $set(component: $type) -> Result<(), Error> {
+	    pub fn $set(&mut self, component: $type) -> Result<(), Error> {
 		let component_id = self.manager.$arena.insert(component);
-		self.manager.widgets.get_mut(self.widget_id).ok_or(Error::NoWidget).$id = Some(component_id);
+		self.manager.widgets.get_mut(self.widget_id).ok_or(Error::NoWidget)?.$id = Some(component_id);
 		Ok(())
 	    }
 
 	    ///
 	    /// Checks whether a widget has a $type component
 	    ///
-	    pub fn $has() -> Result<bool, Error> {
-		Ok(self.manager.widgets.get(self.widget_id)?.$id.is_some())
-	    } 
-	}
+	    pub fn $has(&self) -> Result<bool, Error> {
+		Ok(self.manager.widgets.get(self.widget_id).ok_or(Error::NoWidget)?.$id.is_some())
+	    }
 
-	impl<'a> Context<'a> {
 	    ///
 	    /// Gets a reference to a component
 	    ///
-	    pub fn $get(widget_id: WidgetId) -> Result<&'a $type, Error> {
-		let component_id = self.manager.widgets.get(widget_id).ok_or(Error::NoWidget)?.$id.ok_or(Error::NoComponent);
+	    pub fn $get(&self) -> Result<& $type, Error> {
+		let component_id = self.manager.widgets.get(self.widget_id).ok_or(Error::NoWidget)?
+		    .$id.ok_or(Error::NoComponent)?;
 		self.manager.$arena.get(component_id).ok_or(Error::NoComponent)
 	    }
 
 	    ///
 	    /// Gets a reference to a component
 	    ///
-	    pub fn $mut(widget_id: WidgetId) -> Result<&'a mut $type, Error> {
-		let component_id = self.manager.widgets.get(widget_id).ok_or(Error::NoWidget)?.$id.ok_or(Error::NoComponent);
+	    pub fn $mut(&mut self) -> Result<& mut $type, Error> {
+		let component_id = self.manager.widgets.get(self.widget_id).ok_or(Error::NoWidget)?
+		    .$id.ok_or(Error::NoComponent)?;
+		self.manager.$arena.get_mut(component_id).ok_or(Error::NoComponent)
+	    }
+	}
+
+	impl<'a> Context<'a> {
+	    ///
+	    /// Gets a reference to a $type component
+	    ///
+	    pub fn $get(&self, widget_id: WidgetId) -> Result<& $type, Error> {
+		let component_id = self.manager.widgets.get(widget_id).ok_or(Error::NoWidget)?
+		    .$id.ok_or(Error::NoComponent)?;
+		self.manager.$arena.get(component_id).ok_or(Error::NoComponent)
+	    }
+
+	    ///
+	    /// Gets a reference to a $type component
+	    ///
+	    pub fn $mut(&mut self, widget_id: WidgetId) -> Result<& mut $type, Error> {
+		let component_id = self.manager.widgets.get(widget_id).ok_or(Error::NoWidget)?
+		    .$id.ok_or(Error::NoComponent)?;
 		self.manager.$arena.get_mut(component_id).ok_or(Error::NoComponent)
 	    }
 	}
     }
 }
 
-define_component!(Button, button_id, buttons, has_button, get_button, mut_button, set_button);
-define_component!(Container, container_id, containers, has_container, get_container, mut_container, set_container);
-define_component!(Dialog, dialog_id, dialogs, has_dialog, get_dialog, mut_dialog, set_dialog);
-define_component!(MouseButtonTarget, mouse_button_target_id, mouse_button_targets, has_mouse_button_target, get_mouse_button_target, mut_mouse_button_target, set_mouse_button_target);
-define_component!(MouseMotionTarget, mouse_motion_target_id, mouse_motion_targets, has_mouse_motion_target, get_mouse_motion_target, mut_mouse_motion, set_mouse_motion);
-define_component!(Spatial, spatial_id, spatials, has_spatial, get_spatial, mut_spatial, set_spatial);
+define_component!(Button, button_id, buttons, has_button, button, button_mut, set_button);
+define_component!(Container, container_id, containers, has_container, container, container_mut, set_container);
+define_component!(Dialog, dialog_id, dialogs, has_dialog, dialog, dialog_mut, set_dialog);
+define_component!(MouseButtonTarget, mouse_button_target_id, mouse_button_targets, has_mouse_button_target, mouse_button_target, mouse_button_target_mut, set_mouse_button_target);
+define_component!(MouseMotionTarget, mouse_motion_target_id, mouse_motion_targets, has_mouse_motion_target, mouse_motion_target, mouse_motion_mut, set_mouse_motion);
+define_component!(Spatial, spatial_id, spatials, has_spatial, spatial, spatial_mut, set_spatial);

@@ -14,11 +14,6 @@
  */
 
 ///
-/// This widget is the target of mouse button events
+/// A dialog component
 ///
-pub struct MouseButtonTarget {}
-
-///
-/// This widget is the target of mouse motion events
-///
-pub struct MouseMotionTarget {}
+pub struct Dialog {}

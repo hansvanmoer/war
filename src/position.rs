@@ -16,6 +16,7 @@
 ///
 /// A 2D position
 ///
+#[derive(Clone)]
 pub struct Position {
     ///
     /// The x coordinate

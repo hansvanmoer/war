@@ -16,6 +16,8 @@
 use crate::ui::spatial::Spatial;
 use crate::ui::widget::{Action, Context, Error, WidgetBuilder, WidgetId};
 
+use std::rc::Rc;
+
 ///
 /// A container component for widgets that contain other widgets
 ///
@@ -43,7 +45,8 @@ impl Container {
 	Spatial::decorate(builder)?;
 	if !builder.has_container()? {
 	    builder.set_container(Container::new())?;
-	    builder.get_spatial()?.add_move_listener(builder.widget_id(), Rc::new(UpdateChildren {}));
+	    let widget_id = builder.widget_id();
+	    builder.spatial_mut()?.add_move_listener(widget_id, Rc::new(UpdateChildren {}));
 	}
 	Ok(())
     }
@@ -59,6 +62,6 @@ impl Action for UpdateChildren {
     /// Updates child positions after move
     ///
     fn execute<'a>(&self, context: &mut Context<'a>) -> Result<(), Error> {
-	
+	Ok(())
     }
 }

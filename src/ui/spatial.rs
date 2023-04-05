@@ -16,7 +16,7 @@
 use crate::bounds::Bounds;
 use crate::dimension::Dimension;
 use crate::position::Position;
-use crate::ui::widget::{Action, Error, ListenerId, Listeners, WidgetBuilder};
+use crate::ui::widget::{Action, Context, Error, ListenerId, Listeners, WidgetBuilder, WidgetId};
 
 use std::rc::Rc;
 
@@ -59,12 +59,14 @@ impl Spatial {
     ///
     /// Creates a new spatial component
     ///
-    fn new() -> Spatial {
+    fn new(widget_id: WidgetId) -> Spatial {
 	Spatial {
+	    widget_id,
 	    position: Position::default(),
 	    preferred_size: Dimension::default(),
 	    bounds: Bounds::default(),
 	    update_bounds: true,
+	    move_listeners: Listeners::new(),
 	}
     }
 
@@ -72,8 +74,8 @@ impl Spatial {
     /// Decorates a widget with a spatial component if it is not already present
     ///
     pub fn decorate<'a>(builder: &mut WidgetBuilder<'a>) -> Result<(), Error> {
-	if !builder.has_spatial() {
-	    builder.set_spatial(Spatial::new());
+	if !builder.has_spatial()? {
+	    builder.set_spatial(Spatial::new(builder.widget_id()));
 	}
 	Ok(())
     }
@@ -89,8 +91,8 @@ impl Spatial {
     ///
     /// Schedule set position
     ///
-    pub fn schedule_set_position(&self, position: Position, context: &mut Context<'a>) {
-	context.schedule(widget_id, Rc::from(SetPosition {
+    pub fn schedule_set_position<'a>(&self, position: Position, context: &mut Context<'a>) {
+	context.schedule_for_self(Rc::from(SetPosition {
 	    position,
 	}));
     }
