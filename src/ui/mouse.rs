@@ -47,6 +47,13 @@ impl<E: 'static> MouseEventTarget<E> {
 	}
 	Ok(())
     }
+
+    ///
+    /// Adds a handler
+    ///
+    pub fn add_handler(&mut self, handler: Rc<dyn EventHandler<E>>) {
+	self.handlers.add(handler);
+    }
     
     ///
     /// Notifies that the widget was the target of a mouse button event
@@ -161,7 +168,14 @@ impl MouseOverTarget {
 	    builder.set_mouse_over_target(MouseOverTarget::new())?;
 	    builder.mouse_motion_target_mut()?.handlers.add(Rc::new(CheckMouseOverHandler{}));
 	}
-	Ok(())8
+	Ok(())
+    }
+
+    ///
+    /// Adds a handler
+    ///
+    pub fn add_handler(&mut self, handler: Rc<dyn EventHandler<MouseOverEvent>>) {
+	self.handlers.add(handler);
     }
 }
 
@@ -179,9 +193,13 @@ impl EventHandler<MouseMotionEvent> for CheckMouseOverHandler {
 	let mouse_over = context.mouse_over_target_mut(context.widget_id())?;
 	let old_within = mouse_over.within;
 	if old_within && !within {
-	    mouse_over.handlers.notify(Rc::from(MouseOverEvent::Exited), scheduler);
+	    mouse_over.handlers.notify(Rc::from(MouseOverEvent {
+		kind: MouseOverEventKind::Exited,
+	    }), scheduler);
 	} else if !old_within && within {
-	    mouse_over.handlers.notify(Rc::from(MouseOverEvent::Entered), scheduler);
+	    mouse_over.handlers.notify(Rc::from(MouseOverEvent {
+		kind: MouseOverEventKind::Entered,
+	    }), scheduler);
 	}
 	mouse_over.within = within;
 	Ok(())
@@ -189,9 +207,9 @@ impl EventHandler<MouseMotionEvent> for CheckMouseOverHandler {
 }
 
 ///
-/// An event for when the mouse pointer enters or exits a component
+/// Types of mouse over events
 ///
-pub enum MouseOverEvent {
+pub enum MouseOverEventKind {
     ///
     /// Mouse has entered
     ///
@@ -201,4 +219,14 @@ pub enum MouseOverEvent {
     /// Mouse has exited
     ///
     Exited,
+}
+
+///
+/// An event for when the mouse pointer enters or exits a component
+///
+pub struct MouseOverEvent {
+    ///
+    /// The kind of event
+    ///
+    pub kind: MouseOverEventKind,
 }

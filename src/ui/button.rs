@@ -13,6 +13,13 @@
  *
  */
 
+use crate::ui::event::{EventHandler, EventHandlers};
+use crate::ui::mouse::{MouseButtonEvent, MouseButtonEventKind, MouseButtonTarget, MouseOverEvent, MouseOverEventKind, MouseOverTarget};
+use crate::ui::spatial::Spatial;
+use crate::ui::widget::{Context, Error, Scheduler, WidgetBuilder, WidgetId};
+
+use std::rc::Rc;
+
 ///
 /// A button widget
 ///
@@ -21,7 +28,7 @@ pub struct Button {
     /// Whether the button is being pressed or not
     ///
     pressed: bool,
-
+    
     ///
     /// Whether the button is highlighted or not
     ///
@@ -54,14 +61,14 @@ impl Button {
     ///
     /// Decorates a widget with a button
     ///
-    pub fn decorate<'a>(builder: &mut WidgetBuilder<'a>, label: String) {
+    pub fn decorate<'a>(builder: &mut WidgetBuilder<'a>, label: String) -> Result<(), Error> {
 	if !builder.has_button()? {
 	    Spatial::decorate(builder)?;
 	    MouseButtonTarget::decorate(builder)?;
 	    MouseOverTarget::decorate(builder)?;
 	    builder.set_button(Button::new(label));
-	    builder.mouse_over_target_mut()?.add(Rc::from(HighlightHandler {}));
-	    builder.mouse_button_target_mut()?.add(Rc::from(ClickHandler {}));
+	    builder.mouse_over_target_mut()?.add_handler(Rc::from(HighlightHandler {}));
+	    builder.mouse_button_target_mut()?.add_handler(Rc::from(ClickHandler {}));
 	}
 	Ok(())
     }
@@ -76,15 +83,16 @@ impl EventHandler<MouseOverEvent> for HighlightHandler {
     ///
     /// Sets highlight status
     ///
-    fn handle_event(&self, event: &Rc<MouseOverEvent>, context: &mut Context<'a>, scheduler: &mut Scheduler) -> Result<(), Error> {
-	match event {
-	    MouseOverEvent::Entered => {
-		context.button_mut(context.widget_id).highlighted = true;
+    fn handle_event<'a>(&self, event: &Rc<MouseOverEvent>, context: &mut Context<'a>, _scheduler: &mut Scheduler) -> Result<(), Error> {
+	match event.kind {
+	    MouseOverEventKind::Entered => {
+		context.button_mut(context.widget_id())?.highlighted = true;
 	    },
-	    MouseOverEvent::Exited => {
-		context.button_mut(context.widget_id).highlighted = false;	
+	    MouseOverEventKind::Exited => {
+		context.button_mut(context.widget_id())?.highlighted = false;	
 	    },
 	}
+	Ok(())
     }
 }
 
@@ -92,21 +100,31 @@ impl EventHandler<MouseOverEvent> for HighlightHandler {
 ///
 /// Manages clicks
 ///
-struct HighlightHandler {}
+struct ClickHandler {}
 
-impl EventHandler<MouseOverEvent> for HighlightHandler {
+impl EventHandler<MouseButtonEvent> for ClickHandler {
     ///
-    /// Sets highlight status
+    /// Sets pressed status
     ///
-    fn handle_event(&self, event: &Rc<MouseOverEvent>, context: &mut Context<'a>, scheduler: &mut Scheduler) -> Result<(), Error> {
-	match event {
-	    MouseOverEvent::Entered => {
-		context.button_mut(context.widget_id).highlighted = true;
+    fn handle_event<'a>(&self, event: &Rc<MouseButtonEvent>, context: &mut Context<'a>, scheduler: &mut Scheduler) -> Result<(), Error> {
+	match event.kind {
+	    MouseButtonEventKind::Pressed => {
+		if context.spatial(context.widget_id())?.bounds().contains_position(&event.position) {
+		    context.button_mut(context.widget_id())?.pressed = true;
+		}
 	    },
-	    MouseOverEvent::Exited => {
-		context.button_mut(context.widget_id).highlighted = false;	
+	    MouseButtonEventKind::Released => {
+		let widget_id = context.widget_id();
+		let button = context.button_mut(context.widget_id())?;
+		if button.pressed {
+		    button.pressed = false;
+		    button.handlers.notify(Rc::from(ButtonEvent {
+			source_id: widget_id,
+		    }), scheduler);
+		}
 	    },
 	}
+	Ok(())
     }
 }
 
