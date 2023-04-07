@@ -16,4 +16,106 @@
 ///
 /// A button widget
 ///
-pub struct Button {}
+pub struct Button {
+    ///
+    /// Whether the button is being pressed or not
+    ///
+    pressed: bool,
+
+    ///
+    /// Whether the button is highlighted or not
+    ///
+    highlighted: bool,
+    
+    ///
+    /// The button label
+    ///
+    label: String,
+
+    ///
+    /// Event handlers
+    ///
+    handlers: EventHandlers<ButtonEvent>,
+}
+
+impl Button {
+    ///
+    /// Creates a new button
+    ///
+    fn new(label: String) -> Button {
+	Button {
+	    pressed: true,
+	    highlighted: false,
+	    label,
+	    handlers: EventHandlers::new(),
+	}
+    }
+
+    ///
+    /// Decorates a widget with a button
+    ///
+    pub fn decorate<'a>(builder: &mut WidgetBuilder<'a>, label: String) {
+	if !builder.has_button()? {
+	    Spatial::decorate(builder)?;
+	    MouseButtonTarget::decorate(builder)?;
+	    MouseOverTarget::decorate(builder)?;
+	    builder.set_button(Button::new(label));
+	    builder.mouse_over_target_mut()?.add(Rc::from(HighlightHandler {}));
+	    builder.mouse_button_target_mut()?.add(Rc::from(ClickHandler {}));
+	}
+	Ok(())
+    }
+}
+
+///
+/// Manages highlighting
+///
+struct HighlightHandler {}
+
+impl EventHandler<MouseOverEvent> for HighlightHandler {
+    ///
+    /// Sets highlight status
+    ///
+    fn handle_event(&self, event: &Rc<MouseOverEvent>, context: &mut Context<'a>, scheduler: &mut Scheduler) -> Result<(), Error> {
+	match event {
+	    MouseOverEvent::Entered => {
+		context.button_mut(context.widget_id).highlighted = true;
+	    },
+	    MouseOverEvent::Exited => {
+		context.button_mut(context.widget_id).highlighted = false;	
+	    },
+	}
+    }
+}
+
+
+///
+/// Manages clicks
+///
+struct HighlightHandler {}
+
+impl EventHandler<MouseOverEvent> for HighlightHandler {
+    ///
+    /// Sets highlight status
+    ///
+    fn handle_event(&self, event: &Rc<MouseOverEvent>, context: &mut Context<'a>, scheduler: &mut Scheduler) -> Result<(), Error> {
+	match event {
+	    MouseOverEvent::Entered => {
+		context.button_mut(context.widget_id).highlighted = true;
+	    },
+	    MouseOverEvent::Exited => {
+		context.button_mut(context.widget_id).highlighted = false;	
+	    },
+	}
+    }
+}
+
+///
+/// Button clicked event
+///
+pub struct ButtonEvent {
+    ///
+    /// The source widget ID
+    ///
+    pub source_id: WidgetId,
+}

@@ -14,7 +14,7 @@
  */
 
 use crate::ui::spatial::Spatial;
-use crate::ui::widget::{Action, Context, Error, WidgetBuilder, WidgetId};
+use crate::ui::widget::{Action, Context, Error, Scheduler, WidgetBuilder, WidgetId};
 
 use std::rc::Rc;
 
@@ -61,7 +61,7 @@ impl Action for UpdateChildren {
     ///
     /// Updates child positions after move
     ///
-    fn execute<'a>(&self, context: &mut Context<'a>) -> Result<(), Error> {
+    fn execute<'a>(&self, context: &mut Context<'a>, scheduler: &mut Scheduler) -> Result<(), Error> {
 	Ok(())
     }
 }

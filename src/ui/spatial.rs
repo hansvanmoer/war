@@ -16,7 +16,7 @@
 use crate::bounds::Bounds;
 use crate::dimension::Dimension;
 use crate::position::Position;
-use crate::ui::widget::{Action, Context, Error, ListenerId, Listeners, WidgetBuilder, WidgetId};
+use crate::ui::widget::{Action, Context, Error, ListenerId, Listeners, Scheduler, WidgetBuilder, WidgetId};
 
 use std::rc::Rc;
 
@@ -83,16 +83,23 @@ impl Spatial {
     ///
     /// Moves the widget
     ///
-    pub fn set_position<'a>(&mut self, position: Position, context: &mut Context<'a>) {
+    pub fn set_position<'a>(&mut self, position: Position, scheduler: &mut Scheduler) {
 	self.position = position;
-	self.move_listeners.notify(context);
+	self.move_listeners.notify(scheduler);
+    }
+
+    ///
+    /// Returns a reference to the bounding box
+    ///
+    pub fn bounds(&self) -> &Bounds {
+	&self.bounds
     }
 
     ///
     /// Schedule set position
     ///
-    pub fn schedule_set_position<'a>(&self, position: Position, context: &mut Context<'a>) {
-	context.schedule_for_self(Rc::from(SetPosition {
+    pub fn schedule_set_position<'a>(&self, position: Position, scheduler: &mut Scheduler) {
+	scheduler.schedule_for_self(Rc::from(SetPosition {
 	    position,
 	}));
     }
@@ -126,7 +133,7 @@ impl Action for SetPosition {
     ///
     /// Sets the position of a component
     ///
-    fn execute<'a>(&self, context: &mut Context<'a>) -> Result<(), Error> {
+    fn execute<'a>(&self, context: &mut Context<'a>, _scheduler: &mut Scheduler) -> Result<(), Error> {
 	context.spatial_mut(context.widget_id())?.position = self.position.clone();
 	Ok(())
     }

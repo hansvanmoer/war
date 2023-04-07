@@ -13,6 +13,8 @@
  *
  */
 
+use crate::position::Position;
+
 ///
 /// A 2D bounding box
 ///
@@ -59,6 +61,13 @@ impl Bounds {
 	    bottom,
 	    top,
 	}
+    }
+
+    ///
+    /// Checks whether a position is contained within these bounds
+    ///
+    pub fn contains_position(&self, p: &Position) -> bool {
+	p.x >= self.left && p.x <= self.right && p.y >= self.bottom && p.y <= self.top
     }
 }
 

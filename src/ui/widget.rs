@@ -17,7 +17,7 @@ use crate::arena::Arena;
 use crate::ui::button::Button;
 use crate::ui::container::Container;
 use crate::ui::dialog::Dialog;
-use crate::ui::mouse::{MouseButtonTarget, MouseMotionTarget};
+use crate::ui::mouse::{MouseButtonTarget, MouseMotionTarget, MouseOverTarget};
 use crate::ui::spatial::Spatial;
 
 use std::collections::LinkedList;
@@ -58,6 +58,11 @@ pub struct Manager {
     mouse_motion_targets: Arena<MouseMotionTarget>,
 
     ///
+    /// All widgets that listen to mouse over events
+    ///
+    mouse_over_targets: Arena<MouseOverTarget>,
+    
+    ///
     /// All widgets that have spatial coordinates
     ///
     spatials: Arena<Spatial>,
@@ -92,6 +97,11 @@ struct Widget {
     ///
     mouse_motion_target_id: Option<ComponentId>,
 
+    ///
+    /// The ID of the mouse over target component
+    ///
+    mouse_over_target_id: Option<ComponentId>,
+    
     ///
     /// The ID of the spatial component
     ///
@@ -154,24 +164,6 @@ pub struct Context<'a> {
 
 impl<'a> Context<'a> {
     ///
-    /// Schedules an action
-    ///
-    pub fn schedule(&mut self, target_id: WidgetId, action: Rc<dyn Action>) {
-	self.actions.push_back(ScheduledAction {
-	    source_id: self.widget_id,
-	    target_id: target_id,
-	    action,
-	});
-    }
-
-    ///
-    /// Schedules an action on the same widget
-    ///
-    pub fn schedule_for_self(&mut self, action: Rc<dyn Action>) {
-	self.schedule(self.widget_id, action);
-    }
-
-    ///
     /// The ID of the widget currently being acted upon
     ///
     pub fn widget_id(&self) -> WidgetId {
@@ -186,7 +178,42 @@ pub trait Action {
     ///
     /// Execute the action
     ///
-    fn execute<'a>(&self, context: &mut Context<'a>) -> Result<(), Error>;
+    fn execute<'a>(&self, context: &mut Context<'a>, scheduler: &mut Scheduler) -> Result<(), Error>;
+}
+
+///
+/// A scheduler
+///
+pub struct Scheduler {
+    ///
+    /// The current widget ID
+    ///
+    widget_id: WidgetId,
+
+    ///
+    /// The list of scheduled actions
+    ///
+    actions: Vec<ScheduledAction>,
+}
+
+impl Scheduler {
+    ///
+    /// Schedules an action
+    ///
+    pub fn schedule(&mut self, target_id: WidgetId, action: Rc<dyn Action>) {
+	self.actions.push(ScheduledAction {
+	    source_id: self.widget_id,
+	    target_id: target_id,
+	    action,
+	});
+    }
+
+    ///
+    /// Schedules an action on the same widget
+    ///
+    pub fn schedule_for_self(&mut self, action: Rc<dyn Action>) {
+	self.schedule(self.widget_id, action);
+    }
 }
 
 ///
@@ -257,8 +284,8 @@ impl Listeners {
     ///
     /// Triggers the listeners
     ///
-    pub fn notify<'a>(&self, context: &mut Context<'a>) {
-	self.listeners.iter().for_each(|entry| context.schedule(entry.target_id, entry.action.clone()));
+    pub fn notify<'a>(&self, scheduler: &mut Scheduler) {
+	self.listeners.iter().for_each(|entry| scheduler.schedule(entry.target_id, entry.action.clone()));
     }
 
     ///
@@ -355,9 +382,65 @@ macro_rules! define_component {
     }
 }
 
-define_component!(Button, button_id, buttons, has_button, button, button_mut, set_button);
-define_component!(Container, container_id, containers, has_container, container, container_mut, set_container);
-define_component!(Dialog, dialog_id, dialogs, has_dialog, dialog, dialog_mut, set_dialog);
-define_component!(MouseButtonTarget, mouse_button_target_id, mouse_button_targets, has_mouse_button_target, mouse_button_target, mouse_button_target_mut, set_mouse_button_target);
-define_component!(MouseMotionTarget, mouse_motion_target_id, mouse_motion_targets, has_mouse_motion_target, mouse_motion_target, mouse_motion_mut, set_mouse_motion);
-define_component!(Spatial, spatial_id, spatials, has_spatial, spatial, spatial_mut, set_spatial);
+define_component!(Button,
+		  button_id,
+		  buttons,
+		  has_button,
+		  button,
+		  button_mut,
+		  set_button
+);
+
+define_component!(Container,
+		  container_id,
+		  containers,
+		  has_container,
+		  container,
+		  container_mut,
+		  set_container
+);
+
+define_component!(Dialog,
+		  dialog_id,
+		  dialogs,
+		  has_dialog,
+		  dialog,
+		  dialog_mut,
+		  set_dialog
+);
+
+define_component!(MouseButtonTarget,
+		  mouse_button_target_id,
+		  mouse_button_targets,
+		  has_mouse_button_target,
+		  mouse_button_target,
+		  mouse_button_target_mut,
+		  set_mouse_button_target
+);
+
+define_component!(MouseMotionTarget,
+		  mouse_motion_target_id,
+		  mouse_motion_targets,
+		  has_mouse_motion_target,
+		  mouse_motion_target,
+		  mouse_motion_target_mut,
+		  set_mouse_motion_target
+);
+
+define_component!(MouseOverTarget,
+		  mouse_over_target_id,
+		  mouse_over_targets,
+		  has_mouse_over_target,
+		  mouse_over_target,
+		  mouse_over_target_mut,
+		  set_mouse_over_target
+);
+
+define_component!(Spatial,
+		  spatial_id,
+		  spatials,
+		  has_spatial,
+		  spatial,
+		  spatial_mut,
+		  set_spatial
+);

@@ -16,6 +16,7 @@
 mod button;
 mod container;
 mod dialog;
+mod event;
 mod mouse;
 mod spatial;
 mod widget;
