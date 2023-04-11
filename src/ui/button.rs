@@ -66,7 +66,7 @@ impl Button {
 	    Spatial::decorate(builder)?;
 	    MouseButtonTarget::decorate(builder)?;
 	    MouseOverTarget::decorate(builder)?;
-	    builder.set_button(Button::new(label));
+	    builder.set_button(Button::new(label))?;
 	    builder.mouse_over_target_mut()?.add_handler(Rc::from(HighlightHandler {}));
 	    builder.mouse_button_target_mut()?.add_handler(Rc::from(ClickHandler {}));
 	}

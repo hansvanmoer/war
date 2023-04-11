@@ -95,10 +95,12 @@ impl IndexedTriangles {
     }
 
     ///
-    /// Loads buffers from a specified config file
+    /// Loads buffers from a specified folder
     ///
-    pub fn load_from_config(path: &mut PathBuf) -> Result<Resources<IndexedTriangles>, Error> {
+    pub fn load_from_folder(path: &mut PathBuf) -> Result<Resources<IndexedTriangles>, Error> {
+	path.push("buffers.rs");
 	let mut names: Vec<String> = crate::configuration::load(path)?;
+	path.pop();
 	let mut resources = Resources::new();
 	for name in names.drain(..) {
 	    path.push(&name);

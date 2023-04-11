@@ -13,7 +13,8 @@
  *
  */
 
-use crate::ui::spatial::Spatial;
+use crate::ui::spatial::{MoveEvent, Spatial};
+use crate::ui::event::EventHandler;
 use crate::ui::widget::{Action, Context, Error, Scheduler, WidgetBuilder, WidgetId};
 
 use std::rc::Rc;
@@ -25,7 +26,7 @@ pub struct Container {
     ///
     /// The rows and columns within the container
     ///
-    children: Vec<Vec<WidgetId>>,
+    rows: Vec<Vec<Column>>,
 }
 
 impl Container {
@@ -34,34 +35,79 @@ impl Container {
     ///
     fn new() -> Container {
 	Container {
-	    children: Vec::new(),
+	    rows: Vec::new(),
 	}
     }
     
     ///
     /// Decorates a widget with a container
     ///
-    fn decorate(builder: &mut WidgetBuilder) -> Result<(), Error> {
+    pub fn decorate(builder: &mut WidgetBuilder) -> Result<(), Error> {
 	Spatial::decorate(builder)?;
 	if !builder.has_container()? {
 	    builder.set_container(Container::new())?;
 	    let widget_id = builder.widget_id();
-	    builder.spatial_mut()?.add_move_listener(widget_id, Rc::new(UpdateChildren {}));
+	    builder.spatial_mut()?.add_move_handler(Rc::new(UpdateChildren {}));
+	}
+	Ok(())
+    }
+    
+    ///
+    /// Schedules an update of each child's position
+    ///
+    fn update_children<'a>(&self, context: &Context<'a>, scheduler: &mut Scheduler) -> Result<(), Error> {
+	for row in self.rows.iter() {
+	    
 	}
 	Ok(())
     }
 }
 
 ///
-/// Update children action
+/// A layout column
+///
+struct Column {
+    ///
+    /// The widget ID
+    ///
+    widget_id: WidgetId,
+
+    ///
+    /// Alignment
+    ///
+    alignment: Alignment,
+}
+
+///
+/// Widget alignment
+///
+pub enum Alignment {
+    ///
+    /// Aligns the widget to the left
+    ///
+    Left,
+
+    ///
+    /// Aligns the widget in the center
+    ///
+    Center,
+
+    ///
+    /// Aligns the widget to the right
+    ///
+    Right,
+}
+
+///
+/// Updates the position of each child when the parent widget moves
 ///
 struct UpdateChildren {}
 
-impl Action for UpdateChildren {
+impl EventHandler<MoveEvent> for UpdateChildren {
     ///
     /// Updates child positions after move
     ///
-    fn execute<'a>(&self, context: &mut Context<'a>, scheduler: &mut Scheduler) -> Result<(), Error> {
-	Ok(())
+    fn handle_event<'a>(&self, event: &Rc<MoveEvent>, context: &mut Context<'a>, scheduler: &mut Scheduler) -> Result<(), Error> {
+	context.container(context.widget_id())?.update_children(context, scheduler)
     }
 }

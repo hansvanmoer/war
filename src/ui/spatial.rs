@@ -16,6 +16,7 @@
 use crate::bounds::Bounds;
 use crate::dimension::Dimension;
 use crate::position::Position;
+use crate::ui::event::{EventHandler, EventHandlers};
 use crate::ui::widget::{Action, Context, Error, ListenerId, Listeners, Scheduler, WidgetBuilder, WidgetId};
 
 use std::rc::Rc;
@@ -50,9 +51,9 @@ pub struct Spatial {
     update_bounds: bool,
 
     ///
-    /// Listeners that have to be notified when the widget is moved
+    /// Handlers that have to be notified when the widget is moved
     ///
-    move_listeners: Listeners,
+    move_handlers: EventHandlers<MoveEvent>,
 }
 
 impl Spatial {
@@ -66,7 +67,7 @@ impl Spatial {
 	    preferred_size: Dimension::default(),
 	    bounds: Bounds::default(),
 	    update_bounds: true,
-	    move_listeners: Listeners::new(),
+	    move_handlers: EventHandlers::new(),
 	}
     }
 
@@ -75,7 +76,7 @@ impl Spatial {
     ///
     pub fn decorate<'a>(builder: &mut WidgetBuilder<'a>) -> Result<(), Error> {
 	if !builder.has_spatial()? {
-	    builder.set_spatial(Spatial::new(builder.widget_id()));
+	    builder.set_spatial(Spatial::new(builder.widget_id()))?;
 	}
 	Ok(())
     }
@@ -84,8 +85,10 @@ impl Spatial {
     /// Moves the widget
     ///
     pub fn set_position<'a>(&mut self, position: Position, scheduler: &mut Scheduler) {
-	self.position = position;
-	self.move_listeners.notify(scheduler);
+	self.position = position.clone();
+	self.move_handlers.notify(Rc::new(MoveEvent {
+	    position: position,
+	}), scheduler);
     }
 
     ///
@@ -105,17 +108,10 @@ impl Spatial {
     }
 	
     ///
-    /// Adds a listener
+    /// Adds a move handler
     ///
-    pub fn add_move_listener(&mut self, widget_id: WidgetId, action: Rc<dyn Action>) -> ListenerId {
-	self.move_listeners.add(widget_id, action)
-    }
-
-    ///
-    /// Removes a listener
-    ///
-    pub fn remove_move_listener(&mut self, id: ListenerId) -> bool {
-	self.move_listeners.remove(id)
+    pub fn add_move_handler(&mut self, handler: Rc<dyn EventHandler<MoveEvent>>) {
+	self.move_handlers.add(handler);
     }
 }
 
@@ -137,4 +133,14 @@ impl Action for SetPosition {
 	context.spatial_mut(context.widget_id())?.position = self.position.clone();
 	Ok(())
     }
+}
+
+///
+/// Signals a widget has been moved
+///
+pub struct MoveEvent {
+    ///
+    /// The new position
+    ///
+    position: Position,
 }

@@ -13,39 +13,24 @@
  *
  */
 
-mod arena;
-mod bounds;
-mod color;
-mod configuration;
-mod dimension;
-mod engine;
-mod graphics;
-mod position;
-mod resource;
-mod settings;
-mod ui;
-mod vector;
-
-use crate::engine::Engine;
-use crate::settings::Settings;
-
-use log::{debug, info};
-
 ///
-/// Main application entry point
+/// A UI style
 ///
-fn main() {
-
-    env_logger::init();
-    info!("application started");
+pub struct Style {
     
-    // load settings
-    let settings = Settings::load();
-    debug!("settings loaded: {:?}", settings);
+}
 
-    let engine = Engine::new().expect("could not initialize engine subsystem");
-    debug!("engine loaded");
+///
+/// A button style
+///
+pub struct ButtonStyle {
+    ///
+    /// The background color
+    ///
+    background: Color,
 
-    let _graphics = engine.create_graphics(&settings).expect("could not initialize graphics subsystem");
-    debug!("graphics subsystem loaded");
+    ///
+    /// Foreground color
+    ///
+    foreground: Color,
 }

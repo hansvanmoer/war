@@ -15,7 +15,9 @@
 
 use crate::settings::Settings;
 use crate::graphics::buffer::IndexedTriangles;
+use crate::graphics::font::Font;
 use crate::graphics::program::Program;
+use crate::graphics::texture::Texture;
 use crate::resource::Resources;
 
 use std::path::PathBuf;
@@ -31,6 +33,8 @@ pub struct Graphics {
     _gl_context: GLContext,
     _programs: Resources<Program>,
     _buffers: Resources<IndexedTriangles>,
+    _fonts: Resources<Font>,
+    _textures: Resources<Texture>,
 }
 
 impl Graphics {
@@ -46,12 +50,16 @@ impl Graphics {
 	let mut path = settings.create_data_path();
 	let programs = Graphics::load_programs(&mut path)?;
 	let buffers = Graphics::load_buffers(&mut path)?;
+	let textures = Graphics::load_textures(&mut path)?;
+	let fonts = Graphics::load_fonts(&mut path)?;
 	
 	Ok(Graphics {
 	    _window: window,
 	    _gl_context: gl_context,
 	    _programs: programs,
 	    _buffers: buffers,
+	    _textures: textures,
+	    _fonts: fonts,
 	})
     }
 
@@ -60,8 +68,7 @@ impl Graphics {
     ///
     fn load_programs(path: &mut PathBuf) -> Result<Resources<Program>, Error> {
 	path.push("shaders");
-	path.push("programs.yaml");
-	let programs = Program::load_from_config(path)?;
+	let programs = Program::load_from_folder(path)?;
 	path.pop();
 	Ok(programs)
     }
@@ -71,10 +78,29 @@ impl Graphics {
     ///
     fn load_buffers(path: &mut PathBuf) -> Result<Resources<IndexedTriangles>, Error> {
 	path.push("buffers");
-	path.push("buffers.yaml");
-	let buffers = IndexedTriangles::load_from_config(path)?;
+	let buffers = IndexedTriangles::load_from_folder(path)?;
 	path.pop();
 	Ok(buffers)
+    }
+
+    ///
+    /// Loads the textures
+    ///
+    fn load_textures(path: &mut PathBuf) -> Result<Resources<Texture>, Error> {
+	path.push("textures");
+	let textures = Texture::load_from_folder(path)?;
+	path.pop();
+	Ok(textures)
+    }
+    
+    ///
+    /// Loads the fonts
+    ///
+    fn load_fonts(path: &mut PathBuf) -> Result<Resources<Font>, Error> {
+	path.push("fonts");
+	let fonts = Font::load_from_folder(path)?;
+	path.pop();
+	Ok(fonts)
     }
 }
 
@@ -87,30 +113,46 @@ pub enum Error {
     /// The window width was invalid
     ///
     BadWindowWidth,
+
     ///
     /// The window height was invalid
     ///
     BadWindowHeight,
+
     ///
     /// The window title was invalid
     ///
     BadWindowTitle,
+
     /// 
     /// An SDL error occurred when the window was created
     ///
     Sdl(String),
+
     ///
     /// Shader error
     ///
     Shader(crate::graphics::shader::Error),
+
     ///
     /// Program error
     ///
     Program(crate::graphics::program::Error),
+
     ///
     /// Buffer error
     ///
     Buffer(crate::graphics::buffer::Error),
+
+    ///
+    /// Texture error
+    ///
+    Texture(crate::graphics::texture::Error),
+
+    ///
+    /// Font error
+    ///
+    Font(crate::graphics::font::Error),
 }
 
 impl From<WindowBuildError> for Error {
@@ -151,5 +193,23 @@ impl From<crate::graphics::buffer::Error> for Error {
     ///
     fn from(e: crate::graphics::buffer::Error) -> Error {
 	Error::Buffer(e)
+    }
+}
+
+impl From<crate::graphics::texture::Error> for Error {
+    ///
+    /// Converts a texture error into a graphics error
+    ///
+    fn from(e: crate::graphics::texture::Error) -> Error {
+	Error::Texture(e)
+    }
+}
+
+impl From<crate::graphics::font::Error> for Error {
+    ///
+    /// Converts a font error into a graphics error
+    ///
+    fn from(e: crate::graphics::font::Error) -> Error {
+	Error::Font(e)
     }
 }

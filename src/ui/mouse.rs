@@ -43,7 +43,7 @@ impl<E: 'static> MouseEventTarget<E> {
     pub fn decorate<'a>(builder: &mut WidgetBuilder<'a>) -> Result<(), Error> {
 	if !builder.has_mouse_button_target()? {
 	    Spatial::decorate(builder)?;
-	    builder.set_mouse_button_target(MouseEventTarget::new());
+	    builder.set_mouse_button_target(MouseEventTarget::new())?;
 	}
 	Ok(())
     }

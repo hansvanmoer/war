@@ -46,7 +46,8 @@ impl Program {
     ///
     /// Loads a set of programs
     ///
-    pub fn load_from_config(path: &mut PathBuf) -> Result<Resources<Program>, Error> {
+    pub fn load_from_folder(path: &mut PathBuf) -> Result<Resources<Program>, Error> {
+	path.push("shaders.yaml");
 	let mut config: ProgramAndShaderConfiguration = crate::configuration::load(path)?;
 	path.pop();
 	let mut shaders = HashMap::new();

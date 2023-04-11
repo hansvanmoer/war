@@ -14,8 +14,10 @@
  */
 
 mod buffer;
+mod font;
 mod graphics;
 mod program;
 mod shader;
+mod texture;
 
 pub use graphics::{Error, Graphics};
