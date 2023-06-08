@@ -48,6 +48,20 @@ impl Dimension {
 	    height,
 	}
     }
+
+    ///
+    /// Returns the width
+    ///
+    pub fn width(&self) -> f32 {
+	self.width
+    }
+
+    ///
+    /// Returns the height
+    ///
+    pub fn height(&self) -> f32 {
+	self.height
+    }
 }
 
 impl Default for Dimension {

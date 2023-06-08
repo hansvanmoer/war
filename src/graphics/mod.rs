@@ -14,10 +14,14 @@
  */
 
 mod buffer;
+mod color;
 mod font;
 mod graphics;
 mod program;
 mod shader;
 mod texture;
+mod transform;
 
-pub use graphics::{Error, Graphics};
+pub use color::Color;
+pub use graphics::{Error, Graphics, ProgramId};
+pub use program::{UniformInteger, Uniform4f32, UniformMatrix4f32};

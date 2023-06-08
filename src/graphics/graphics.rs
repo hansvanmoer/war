@@ -15,9 +15,11 @@
 
 use crate::settings::Settings;
 use crate::graphics::buffer::IndexedTriangles;
+use crate::graphics::color::Color;
 use crate::graphics::font::Font;
-use crate::graphics::program::Program;
+use crate::graphics::program::{Program, Uniform4f32, UniformMatrix4f32, UniformInteger};
 use crate::graphics::texture::Texture;
+use crate::graphics::transform::Transform;
 use crate::resource::Resources;
 
 use std::path::PathBuf;
@@ -26,12 +28,17 @@ use sdl2::VideoSubsystem;
 use sdl2::video::{GLContext, Window, WindowBuildError};
 
 ///
+/// Program ID
+///
+pub type ProgramId = usize;
+
+///
 /// The graphics subsystem
 ///
 pub struct Graphics {
     _window: Window,
     _gl_context: GLContext,
-    _programs: Resources<Program>,
+    programs: Resources<Program>,
     _buffers: Resources<IndexedTriangles>,
     _fonts: Resources<Font>,
     _textures: Resources<Texture>,
@@ -56,7 +63,7 @@ impl Graphics {
 	Ok(Graphics {
 	    _window: window,
 	    _gl_context: gl_context,
-	    _programs: programs,
+	    programs: programs,
 	    _buffers: buffers,
 	    _textures: textures,
 	    _fonts: fonts,
@@ -102,10 +109,46 @@ impl Graphics {
 	path.pop();
 	Ok(fonts)
     }
+
+    ///
+    /// Returns the program ID for a specified name
+    ///
+    pub fn programIdByName(&self, name: &str) -> Result<ProgramId, Error> {
+	self.programs.id_by_name(name).ok_or(Error::NoProgram)
+    }
+
+    ///
+    /// Uses the program
+    ///
+    pub fn useProgram(&self, program_id: ProgramId) -> Result<(), Error> {
+	self.programs.get(program_id).ok_or(Error::NoProgram)?.useProgram();	
+	Ok(())
+    }
+
+    ///
+    /// Creates a 4 x f32 tuple uniform 
+    ///
+    pub fn uniform4f32(&self, program_id: ProgramId, name: &str) -> Result<Uniform4f32, Error> {
+	Ok(self.programs.get(program_id).ok_or(Error::NoProgram)?.uniform4f32(name)?)
+    }
+
+    ///
+    /// Creates a 4 x 4 f32 matrix uniform 
+    ///
+    pub fn uniformMatrix4f32(&self, program_id: ProgramId, name: &str) -> Result<UniformMatrix4f32, Error> {
+	Ok(self.programs.get(program_id).ok_or(Error::NoProgram)?.uniformMatrix4f32(name)?)
+    }
+
+    ///
+    /// Creates an integer uniform
+    ///
+    pub fn uniformInteger(&self, program_id: ProgramId, name: &str) -> Result<UniformInteger, Error> {
+	Ok(self.programs.get(program_id).ok_or(Error::NoProgram)?.uniformInteger(name)?)
+    }
 }
 
 ///
-///
+/// Errors that occur when using the graphics subsystem
 ///
 #[derive(Debug)]
 pub enum Error {
@@ -153,6 +196,11 @@ pub enum Error {
     /// Font error
     ///
     Font(crate::graphics::font::Error),
+
+    ///
+    /// No program found for the specified ID
+    ///
+    NoProgram,
 }
 
 impl From<WindowBuildError> for Error {

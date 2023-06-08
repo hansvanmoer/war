@@ -82,6 +82,20 @@ impl Spatial {
     }
 
     ///
+    /// Returns the position of the widget
+    ///
+    pub fn position(&self) -> &Position {
+	&self.position
+    }
+
+    ///
+    /// Returns the preferred size
+    ///
+    pub fn preferred_size(&self) -> &Dimension {
+	&self.preferred_size
+    }
+    
+    ///
     /// Moves the widget
     ///
     pub fn set_position<'a>(&mut self, position: Position, scheduler: &mut Scheduler) {
@@ -97,41 +111,12 @@ impl Spatial {
     pub fn bounds(&self) -> &Bounds {
 	&self.bounds
     }
-
-    ///
-    /// Schedule set position
-    ///
-    pub fn schedule_set_position<'a>(&self, position: Position, scheduler: &mut Scheduler) {
-	scheduler.schedule_for_self(Rc::from(SetPosition {
-	    position,
-	}));
-    }
 	
     ///
     /// Adds a move handler
     ///
     pub fn add_move_handler(&mut self, handler: Rc<dyn EventHandler<MoveEvent>>) {
 	self.move_handlers.add(handler);
-    }
-}
-
-///
-/// Sets the position of a component
-/// 
-struct SetPosition {
-    ///
-    /// The position
-    ///
-    position: Position,
-}
-
-impl Action for SetPosition {
-    ///
-    /// Sets the position of a component
-    ///
-    fn execute<'a>(&self, context: &mut Context<'a>, _scheduler: &mut Scheduler) -> Result<(), Error> {
-	context.spatial_mut(context.widget_id())?.position = self.position.clone();
-	Ok(())
     }
 }
 

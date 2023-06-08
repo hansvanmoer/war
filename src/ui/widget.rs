@@ -19,6 +19,7 @@ use crate::ui::container::Container;
 use crate::ui::dialog::Dialog;
 use crate::ui::mouse::{MouseButtonTarget, MouseMotionTarget, MouseOverTarget};
 use crate::ui::spatial::Spatial;
+use crate::ui::style::Style;
 
 use std::collections::LinkedList;
 use std::rc::Rc;
@@ -66,6 +67,30 @@ pub struct Manager {
     /// All widgets that have spatial coordinates
     ///
     spatials: Arena<Spatial>,
+
+    ///
+    /// The widget style
+    ///
+    style: Style,
+}
+
+impl Manager {
+    ///
+    /// Creates a new manager
+    ///
+    pub fn new(style: Style) -> Manager {
+	Manager {
+	    widgets: Arena::new(),
+	    buttons: Arena::new(),
+	    containers: Arena::new(),
+	    dialogs: Arena::new(),
+	    mouse_button_targets: Arena::new(),
+	    mouse_motion_targets: Arena::new(),
+	    mouse_over_targets: Arena::new(),
+	    spatials: Arena::new(),
+	    style,
+	}
+    }
 }
 
 ///
@@ -140,6 +165,10 @@ impl<'a> WidgetBuilder<'a> {
     pub fn widget_id(&self) -> WidgetId {
 	self.widget_id
     }
+
+    pub fn style(&self) -> &Style {
+	&self.manager.style
+    }
 }
 
 ///
@@ -168,6 +197,13 @@ impl<'a> Context<'a> {
     ///
     pub fn widget_id(&self) -> WidgetId {
 	self.widget_id
+    }
+
+    ///
+    /// Returns the UI style
+    ///
+    pub fn style(&self) -> &Style {
+	&self.manager.style
     }
 }
 

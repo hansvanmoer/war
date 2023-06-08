@@ -39,6 +39,13 @@ impl Position {
 	    y,
 	}
     }
+
+    ///
+    /// Returns the coordinate tuple
+    ///
+    pub fn coordinates(&self) -> (f32, f32) {
+	(self.x, self.y)
+    }
 }
 
 impl Default for Position {

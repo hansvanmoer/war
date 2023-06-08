@@ -24,6 +24,7 @@ mod position;
 mod resource;
 mod settings;
 mod ui;
+mod validation;
 mod vector;
 
 use crate::engine::Engine;

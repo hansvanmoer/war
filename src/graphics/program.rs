@@ -17,11 +17,14 @@ use crate::graphics::shader::{Shader, ShaderKind};
 use crate::resource::Resources;
 
 use std::collections::HashMap;
+use std::ffi::CString;
 use std::path::PathBuf;
 use std::rc::Rc;
 
 use gl::types::GLuint;
 use serde::Deserialize;
+
+pub type UniformId = i32;
 
 ///
 /// An OpenGL  program
@@ -37,12 +40,12 @@ impl Program {
     ///
     /// Uses a program
     ///
-    pub fn run(&self) {
+    pub fn useProgram(&self) {
 	unsafe {
 	    gl::UseProgram(self.id);
 	}
     }
-
+    
     ///
     /// Loads a set of programs
     ///
@@ -66,6 +69,44 @@ impl Program {
 	}
 	Ok(programs)
     }
+
+    ///
+    /// Creates a 4 x f32 tuple uniform 
+    ///
+    pub fn uniform4f32(&self, name: &str) -> Result<Uniform4f32, Error> {
+	Ok(Uniform4f32 {
+	    location: self.uniformLocation(name)?,
+	})
+    }
+
+    ///
+    /// Creates a 4 x 4 f32 matrix uniform 
+    ///
+    pub fn uniformMatrix4f32(&self, name: &str) -> Result<UniformMatrix4f32, Error> {
+	Ok(UniformMatrix4f32 {
+	    location: self.uniformLocation(name)?,
+	})
+    }
+
+    ///
+    /// Creates an integer uniform
+    ///
+    pub fn uniformInteger(&self, name: &str) -> Result<UniformInteger, Error> {
+	Ok(UniformInteger {
+	    location: self.uniformLocation(name)?,
+	})
+    }
+    
+    ///
+    /// Finds the location of a uniform
+    ///
+    fn uniformLocation(&self, name: &str) -> Result<i32, Error> {
+	let buf = CString::new(name)?;
+	Ok(unsafe {
+	    gl::GetUniformLocation(self.id as gl::types::GLuint, buf.as_ptr())
+	})
+    }
+
 }
 
 impl Drop for Program {
@@ -147,6 +188,69 @@ impl Drop for ProgramBuilder {
 }
 
 ///
+/// A 4 x f32 tuple uniform variable
+///
+pub struct Uniform4f32 {
+    ///
+    /// The location
+    ///
+    location: i32,
+}
+
+impl Uniform4f32 {
+    ///
+    /// Sets the variable
+    ///
+    pub fn set(&mut self, first: f32, second: f32, third: f32, fourth: f32) {
+	unsafe {
+	    gl::Uniform4f(self.location, first, second, third, fourth);
+	}
+    }
+}
+
+///
+/// A 4x4 f32 matrix variable
+///
+pub struct UniformMatrix4f32 {
+    ///
+    /// The location
+    ///
+    location: i32,
+}
+
+impl UniformMatrix4f32 {
+    ///
+    /// Sets the variable
+    ///
+    pub fn set(&mut self, row_values: &[f32]) {
+	unsafe {
+	    gl::UniformMatrix4fv(self.location, 1, true as gl::types::GLboolean, row_values.as_ptr());
+	}
+    }
+}
+
+///
+/// An integer variable
+///
+pub struct UniformInteger {
+    ///
+    /// The location
+    ///
+    location: i32,
+}
+
+impl UniformInteger {
+    ///
+    /// Sets the variable
+    ///
+    fn set(&self, value: i32) {
+	unsafe {
+	    gl::Uniform1i(self.location, value);
+	}
+    }
+}
+
+///
 /// Errors that can occur when a program is created
 ///
 #[derive(Debug)]
@@ -171,6 +275,10 @@ pub enum Error {
     /// A shader error occurred
     ///
     Shader(crate::graphics::shader::Error),
+    ///
+    /// The name for the uniform is not a correct c string
+    ///
+    BadUniformName,
 }
 
 impl From<crate::resource::Error> for Error {
@@ -197,6 +305,15 @@ impl From<crate::graphics::shader::Error> for Error {
     ///
     fn from(e: crate::graphics::shader::Error) -> Error {
 	Error::Shader(e)
+    }
+}
+
+impl From<std::ffi::NulError> for Error {
+    ///
+    /// Converts a CString error into a program error
+    ///
+    fn from(e: std::ffi::NulError) -> Error {
+	Error::BadUniformName
     }
 }
 

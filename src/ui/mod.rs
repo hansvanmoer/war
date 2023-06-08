@@ -19,4 +19,5 @@ mod dialog;
 mod event;
 mod mouse;
 mod spatial;
+mod style;
 mod widget;

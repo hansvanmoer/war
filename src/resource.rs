@@ -68,6 +68,20 @@ impl<T> Resources<T> {
 	    Ok(id)
 	}
     }
+
+    ///
+    /// Gets a resource by name
+    ///
+    pub fn id_by_name(&self, name: &str) -> Option<usize> {
+	self.by_name.get(name).copied()
+    }
+
+    ///
+    /// Gets a resource by ID
+    ///
+    pub fn get(&self, id: usize) -> Option<& T> {
+	self.buffer.get(id)
+    }
 }
 
 ///
