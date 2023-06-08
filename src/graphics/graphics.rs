@@ -28,12 +28,17 @@ use sdl2::VideoSubsystem;
 use sdl2::video::{GLContext, Window, WindowBuildError};
 
 ///
-/// Program ID
+/// Program ID type
 ///
 pub type ProgramId = usize;
 
 ///
-/// Vertex buffer ID
+/// Texture ID type
+///
+pub type TextureId = usize;
+
+///
+/// Vertex buffer ID type
 ///
 pub type VertexBufferId = usize;
 
@@ -46,7 +51,7 @@ pub struct Graphics {
     programs: Resources<Program>,
     buffers: Resources<IndexedTriangles>,
     _fonts: Resources<Font>,
-    _textures: Resources<Texture>,
+    textures: Resources<Texture>,
 }
 
 impl Graphics {
@@ -70,7 +75,7 @@ impl Graphics {
 	    _gl_context: gl_context,
 	    programs: programs,
 	    buffers: buffers,
-	    _textures: textures,
+	    textures: textures,
 	    _fonts: fonts,
 	})
     }
@@ -159,6 +164,14 @@ impl Graphics {
     }
 
     ///
+    /// Binds a texture
+    ///
+    pub fn bind_texture(&self, texture_id: TextureId) -> Result<(), Error> {
+	self.textures.get(texture_id).ok_or(Error::NoTexture)?.bind();
+	Ok(())
+    }
+    
+    ///
     /// Draws a vertex buffer
     ///
     pub fn draw_vertex_buffer(&self, vertex_buffer_id: VertexBufferId) -> Result<(), Error> {
@@ -222,6 +235,11 @@ pub enum Error {
     ///
     NoProgram,
 
+    ///
+    /// No texture found for the specified ID
+    ///
+    NoTexture,
+    
     ///
     /// No vertex buffer found for the specified ID
     ///

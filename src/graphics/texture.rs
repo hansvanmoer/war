@@ -92,6 +92,15 @@ impl Texture {
 
 	Texture::from_buffer(image.as_raw().as_slice(), image.width() as i32, image.height() as i32)
     }
+
+    ///
+    /// Binds the texture
+    ///
+    pub fn bind(&self) {
+	unsafe {
+	    gl::BindTexture(gl::TEXTURE_2D, self.id);
+	}
+    }
 }
 
 impl Drop for Texture {

@@ -13,7 +13,7 @@
  *
  */
 
-use crate::graphics::{Color, Graphics, ProgramId, Transform, Uniform4f32, UniformMatrix4f32, VertexBufferId};
+use crate::graphics::{Color, Graphics, ProgramId, TextureId, Transform, Uniform4f32, UniformMatrix4f32, VertexBufferId};
 
 ///
 /// A renderer for UI elements
@@ -24,6 +24,11 @@ pub struct Renderer<'a> {
     ///
     graphics: &'a Graphics,
 
+    ///
+    /// The image renderer
+    ///
+    image_renderer: ImageRenderer,
+    
     ///
     /// The filled rectangle renderer
     ///
@@ -37,6 +42,7 @@ impl<'a> Renderer<'a> {
     pub fn new(graphics: &'a Graphics) -> Result<Renderer<'a>, Error> {
 	Ok(Renderer {
 	    graphics,
+	    image_renderer: ImageRenderer::new(graphics)?,
 	    filled_rectangle: FilledRectangleRenderer::new(graphics)?,
 	})
     }
@@ -46,6 +52,13 @@ impl<'a> Renderer<'a> {
     ///
     pub fn fill_rectangle(&mut self, left: f32, right: f32, top: f32, bottom: f32, color: &Color) {
 	self.filled_rectangle.render(&self.graphics, left, right, top, bottom, color);
+    }
+
+    ///
+    /// Draws an image
+    ///
+    pub fn draw_image(&mut self, left: f32, right: f32, top: f32, bottom: f32, texture_id: TextureId) -> Result<(), Error>{
+	self.image_renderer.render(&self.graphics, left, right, top, bottom, texture_id)
     }
 }
 
@@ -98,6 +111,54 @@ impl FilledRectangleRenderer {
 	transform.copy_to_uniform(&mut self.transform);
 	color.copy_to_uniform(&mut self.fill_color);
 	graphics.draw_vertex_buffer(self.vertex_buffer_id);
+    }
+}
+
+
+///
+/// A renderer for icons
+///
+struct ImageRenderer {
+    ///
+    /// The program ID
+    ///
+    program: ProgramId,
+
+    ///
+    /// The vertex buffer ID
+    ///
+    vertex_buffer_id: VertexBufferId,
+
+    ///
+    /// The transform uniform
+    ///
+    transform: UniformMatrix4f32,
+}
+
+impl ImageRenderer {
+    ///
+    /// Creates the filled rectangle renderer
+    ///
+    fn new(graphics: &Graphics) -> Result<ImageRenderer, Error> {
+	let program = graphics.program_id("ui_icon")?;
+	Ok(ImageRenderer {
+	    program,
+	    vertex_buffer_id: graphics.vertex_buffer_id("rectangle")?,
+	    transform: graphics.uniform_matrix_4f32(program, "transform")?,
+	})
+    }
+
+    ///
+    /// Fill a rectangle with the specified color
+    ///
+    pub fn render(&mut self, graphics: &Graphics, left: f32, right: f32, top: f32, bottom: f32, texture_id: TextureId) -> Result<(), Error>{
+	let width = right - left;
+	let height = bottom - top;
+	let transform = Transform::scale(1.0 / width, 1.0 + height, 1.0) * Transform::translate(left, right, 0.0);
+	transform.copy_to_uniform(&mut self.transform);
+	graphics.bind_texture(texture_id)?;
+	graphics.draw_vertex_buffer(self.vertex_buffer_id);
+	Ok(())
     }
 }
 
