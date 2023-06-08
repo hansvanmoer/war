@@ -74,7 +74,7 @@ impl Transform {
     ///
     /// Copies the transform to the uniform variable
     ///
-    pub fn copyToUniform(&self, uniform: &mut UniformMatrix4f32) {
+    pub fn copy_to_uniform(&self, uniform: &mut UniformMatrix4f32) {
 	uniform.set(&self.matrix);
     }
     

@@ -40,7 +40,7 @@ impl Program {
     ///
     /// Uses a program
     ///
-    pub fn useProgram(&self) {
+    pub fn use_program(&self) {
 	unsafe {
 	    gl::UseProgram(self.id);
 	}
@@ -73,34 +73,34 @@ impl Program {
     ///
     /// Creates a 4 x f32 tuple uniform 
     ///
-    pub fn uniform4f32(&self, name: &str) -> Result<Uniform4f32, Error> {
+    pub fn uniform_4f32(&self, name: &str) -> Result<Uniform4f32, Error> {
 	Ok(Uniform4f32 {
-	    location: self.uniformLocation(name)?,
+	    location: self.uniform_location(name)?,
 	})
     }
 
     ///
     /// Creates a 4 x 4 f32 matrix uniform 
     ///
-    pub fn uniformMatrix4f32(&self, name: &str) -> Result<UniformMatrix4f32, Error> {
+    pub fn uniform_matrix_4f32(&self, name: &str) -> Result<UniformMatrix4f32, Error> {
 	Ok(UniformMatrix4f32 {
-	    location: self.uniformLocation(name)?,
+	    location: self.uniform_location(name)?,
 	})
     }
 
     ///
     /// Creates an integer uniform
     ///
-    pub fn uniformInteger(&self, name: &str) -> Result<UniformInteger, Error> {
+    pub fn uniform_integer(&self, name: &str) -> Result<UniformInteger, Error> {
 	Ok(UniformInteger {
-	    location: self.uniformLocation(name)?,
+	    location: self.uniform_location(name)?,
 	})
     }
     
     ///
     /// Finds the location of a uniform
     ///
-    fn uniformLocation(&self, name: &str) -> Result<i32, Error> {
+    fn uniform_location(&self, name: &str) -> Result<i32, Error> {
 	let buf = CString::new(name)?;
 	Ok(unsafe {
 	    gl::GetUniformLocation(self.id as gl::types::GLuint, buf.as_ptr())

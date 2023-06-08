@@ -33,13 +33,18 @@ use sdl2::video::{GLContext, Window, WindowBuildError};
 pub type ProgramId = usize;
 
 ///
+/// Vertex buffer ID
+///
+pub type VertexBufferId = usize;
+
+///
 /// The graphics subsystem
 ///
 pub struct Graphics {
     _window: Window,
     _gl_context: GLContext,
     programs: Resources<Program>,
-    _buffers: Resources<IndexedTriangles>,
+    buffers: Resources<IndexedTriangles>,
     _fonts: Resources<Font>,
     _textures: Resources<Texture>,
 }
@@ -64,7 +69,7 @@ impl Graphics {
 	    _window: window,
 	    _gl_context: gl_context,
 	    programs: programs,
-	    _buffers: buffers,
+	    buffers: buffers,
 	    _textures: textures,
 	    _fonts: fonts,
 	})
@@ -111,39 +116,54 @@ impl Graphics {
     }
 
     ///
+    ///
+    ///
+    pub fn vertex_buffer_id(&self, name: &str) -> Result<VertexBufferId, Error> {
+	self.buffers.id_by_name(name).ok_or(Error::NoVertexBuffer)
+    }
+
+    ///
     /// Returns the program ID for a specified name
     ///
-    pub fn programIdByName(&self, name: &str) -> Result<ProgramId, Error> {
+    pub fn program_id(&self, name: &str) -> Result<ProgramId, Error> {
 	self.programs.id_by_name(name).ok_or(Error::NoProgram)
     }
 
     ///
     /// Uses the program
     ///
-    pub fn useProgram(&self, program_id: ProgramId) -> Result<(), Error> {
-	self.programs.get(program_id).ok_or(Error::NoProgram)?.useProgram();	
+    pub fn use_program(&self, program_id: ProgramId) -> Result<(), Error> {
+	self.programs.get(program_id).ok_or(Error::NoProgram)?.use_program();	
 	Ok(())
     }
 
     ///
     /// Creates a 4 x f32 tuple uniform 
     ///
-    pub fn uniform4f32(&self, program_id: ProgramId, name: &str) -> Result<Uniform4f32, Error> {
-	Ok(self.programs.get(program_id).ok_or(Error::NoProgram)?.uniform4f32(name)?)
+    pub fn uniform_4f32(&self, program_id: ProgramId, name: &str) -> Result<Uniform4f32, Error> {
+	Ok(self.programs.get(program_id).ok_or(Error::NoProgram)?.uniform_4f32(name)?)
     }
 
     ///
     /// Creates a 4 x 4 f32 matrix uniform 
     ///
-    pub fn uniformMatrix4f32(&self, program_id: ProgramId, name: &str) -> Result<UniformMatrix4f32, Error> {
-	Ok(self.programs.get(program_id).ok_or(Error::NoProgram)?.uniformMatrix4f32(name)?)
+    pub fn uniform_matrix_4f32(&self, program_id: ProgramId, name: &str) -> Result<UniformMatrix4f32, Error> {
+	Ok(self.programs.get(program_id).ok_or(Error::NoProgram)?.uniform_matrix_4f32(name)?)
     }
 
     ///
     /// Creates an integer uniform
     ///
-    pub fn uniformInteger(&self, program_id: ProgramId, name: &str) -> Result<UniformInteger, Error> {
-	Ok(self.programs.get(program_id).ok_or(Error::NoProgram)?.uniformInteger(name)?)
+    pub fn uniform_integer(&self, program_id: ProgramId, name: &str) -> Result<UniformInteger, Error> {
+	Ok(self.programs.get(program_id).ok_or(Error::NoProgram)?.uniform_integer(name)?)
+    }
+
+    ///
+    /// Draws a vertex buffer
+    ///
+    pub fn draw_vertex_buffer(&self, vertex_buffer_id: VertexBufferId) -> Result<(), Error> {
+	self.buffers.get(vertex_buffer_id).ok_or(Error::NoVertexBuffer)?.draw();
+	Ok(())
     }
 }
 
@@ -201,6 +221,11 @@ pub enum Error {
     /// No program found for the specified ID
     ///
     NoProgram,
+
+    ///
+    /// No vertex buffer found for the specified ID
+    ///
+    NoVertexBuffer,
 }
 
 impl From<WindowBuildError> for Error {

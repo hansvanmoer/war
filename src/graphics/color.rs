@@ -109,7 +109,7 @@ impl Color {
     ///
     /// Copies this type into a uniform variable
     ///
-    pub fn copyToUniform(&self, uniform: &mut Uniform4f32) {
+    pub fn copy_to_uniform(&self, uniform: &mut Uniform4f32) {
 	uniform.set(self.red(), self.green(), self.blue(), self.alpha());
     }
 }

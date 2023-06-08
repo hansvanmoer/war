@@ -23,5 +23,6 @@ mod texture;
 mod transform;
 
 pub use color::Color;
-pub use graphics::{Error, Graphics, ProgramId};
+pub use graphics::{Error, Graphics, ProgramId, VertexBufferId};
 pub use program::{UniformInteger, Uniform4f32, UniformMatrix4f32};
+pub use transform::Transform;
