@@ -16,6 +16,7 @@
 ///
 /// A 2D size tuple
 ///
+#[derive(Clone)]
 pub struct Dimension {
     ///
     /// The width, always positive

@@ -1,0 +1,18 @@
+shaders:
+  ui_fill_rectangle_vertex:
+    kind: Vertex
+  ui_fill_rectangle_fragment:
+    kind: Fragment
+  ui_draw_image_vertex:
+    kind: Vertex
+  ui_draw_image_fragment:
+    kind: Fragment
+programs:
+  ui_fill_rectangle:
+    shaders:
+      - ui_fill_rectangle_vertex
+      - ui_fill_rectangle_fragment
+  ui_draw_image:
+    shaders:
+      - ui_draw_image_vertex
+      - ui_draw_image_fragment

@@ -41,6 +41,13 @@ impl<T> Arena<T> {
     }
 
     ///
+    /// The current capacity
+    ///
+    pub fn cap(&self) -> usize {
+	self.buffer.len()
+    }
+    
+    ///
     /// Inserts a new object into the arena
     ///
     pub fn insert(&mut self, object: T) -> usize {
@@ -119,6 +126,17 @@ impl<T> Arena<T> {
 	Iter {
 	    arena: self,
 	    next_id: 0,
+	}
+    }
+
+    ///
+    /// Applies the function to each object
+    ///
+    pub fn for_each_mut<F: Fn(&mut T) -> ()>(&mut self, f: F) {
+	for object in self.buffer.iter_mut() {
+	    if object.is_some() {
+		f(object.as_mut().unwrap());
+	    }
 	}
     }
 }

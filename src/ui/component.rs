@@ -13,9 +13,17 @@
  *
  */
 
-mod component;
-mod container;
-mod error;
-mod event;
-mod shape;
-mod system;
+///
+/// An ID type for components
+///
+pub type Id = usize;
+
+///
+/// The generic component trait
+///
+pub trait Component {
+    ///
+    /// The ID of the widget to which this component belongs
+    ///
+    fn id() -> Id;   
+}

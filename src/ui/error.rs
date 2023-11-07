@@ -13,7 +13,31 @@
  *
  */
 
+use std::cell::{BorrowError, BorrowMutError};
+
 ///
-/// A dialog component
+/// All errors that can occur in the UI subsystem
 ///
-pub struct Dialog {}
+pub enum Error {
+    ///
+    /// The system no longer exists
+    ///
+    NoSystem,
+
+    ///
+    /// An error occurred borrowing a value, this indicates a programming error
+    ///
+    BorrowError,
+}
+
+impl From<BorrowError> for Error {
+    fn from(e: BorrowError) -> Error {
+	Error::BorrowError
+    }
+}
+
+impl From<BorrowMutError> for Error {
+    fn from(e: BorrowMutError) -> Error {
+	Error::BorrowError
+    }
+}

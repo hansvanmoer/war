@@ -64,6 +64,34 @@ impl Bounds {
     }
 
     ///
+    /// Returns the left bound
+    ///
+    pub fn left(&self) -> f32 {
+	self.left
+    }
+
+    ///
+    /// Returns the right bound
+    ///
+    pub fn right(&self) -> f32 {
+	self.right
+    }
+
+    ///
+    /// Returns the top bound
+    ///
+    pub fn top(&self) -> f32 {
+	self.top
+    }
+    
+    ///
+    /// Returns the bottom bound
+    ///
+    pub fn bottom(&self) -> f32 {
+	self.bottom
+    }
+    
+    ///
     /// Checks whether a position is contained within these bounds
     ///
     pub fn contains_position(&self, p: &Position) -> bool {

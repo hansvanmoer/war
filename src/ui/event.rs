@@ -13,102 +13,120 @@
  *
  */
 
-use crate::ui::widget::{Action, Context, Error, Scheduler};
+use crate::arena::Arena;
+use crate::ui::component::Id;
+use crate::ui::error::Error;
+use crate::ui::system::{Action, System};
 
-use std::collections::BTreeMap;
-use std::rc::Rc;
+use std::cell::RefCell;
+use std::rc::{Rc, Weak};
 
 ///
-/// An event handler
+/// An event listener
 ///
-pub trait EventHandler<E> {
+pub trait Listener<E: 'static> {
     ///
-    /// Executes an event action
+    /// Notifies the handler that an event has been triggered
     ///
-    fn handle_event<'a>(&self, event: &Rc<E>, context: &mut Context<'a>, scheduler: &mut Scheduler) -> Result<(), Error>;
-
+    fn notify(&self, event: Rc<E>) -> Result<(), Error>;
 }
 
 ///
-/// An adapter from actions to event handlers
+/// A set of event listeners
 ///
-pub struct EventAction<E> {
+pub struct Listeners<E: 'static> {
     ///
-    /// The underlying event handler
+    /// A set of listeners
     ///
-    event_handler: Rc<dyn EventHandler<E>>,
+    listeners: Arena<Rc<dyn Listener<E>>>,
+}
 
+impl<E: 'static> Listeners<E> {
+    ///
+    /// Creates a new set of listeners
+    ///
+    pub fn new() -> Listeners<E> {
+	Listeners {
+	    listeners: Arena::new(),
+	}
+    }
+
+    ///
+    /// Notifies all listeners
+    ///
+    pub fn notify(&self, event: Rc<E>) -> Result<(), Error> {
+	self.listeners.iter().try_for_each(|l| l.notify(event.clone()))
+    }
+
+    ///
+    /// Schedules event notification
+    ///
+    pub fn try_schedule_notify(&self, event: Rc<E>, system: &Weak<RefCell<System>>) -> Result<(), Error> {
+	let mut system = system.upgrade().ok_or(Error::NoSystem)?;
+	let mut system = system.borrow_mut();
+	self.listeners.iter().for_each(|l| system.schedule(Box::from(NotifyAction {
+	    event: event.clone(),
+	    listener: Rc::downgrade(&l),
+	})));
+	Ok(())
+    }
+
+    ///
+    /// Registers a listener
+    ///
+    pub fn register(&mut self, listener: Rc<dyn Listener<E>>) -> Id {
+	self.listeners.insert(listener)
+    }
+
+    ///
+    /// Unregisters a listener
+    ///
+    pub fn unregister(&mut self, id: Id) -> Option<Rc<dyn Listener<E>>> {
+	self.listeners.remove(id)
+    }
+}
+
+///
+/// Wraps an event into an action
+///
+struct NotifyAction<E: 'static> {
     ///
     /// The event
     ///
     event: Rc<E>,
+
+    ///
+    /// The listener
+    ///
+    listener: Weak<dyn Listener<E>>,
 }
 
-impl<E> EventAction<E> {
+impl<E: 'static> Action for NotifyAction<E> {
+    fn execute(&self) -> Result<(), Error> {
+	if let Some(listener) = self.listener.upgrade() {
+	    listener.notify(self.event.clone())?;
+	}
+	Ok(())
+    }
+}
+
+///
+/// A basic event triggered by a component
+///
+pub struct ComponentEvent {
     ///
-    /// Creates a new event action
+    /// The ID of the component that triggered the event
     ///
-    pub fn new(event: Rc<E>, event_handler: Rc<dyn EventHandler<E>>) -> EventAction<E> {
-	EventAction {
-	    event_handler,
-	    event,
+    pub id: Id,
+}
+
+impl ComponentEvent {
+    ///
+    ///
+    ///
+    pub fn new(id: Id) -> ComponentEvent {
+	ComponentEvent {
+	    id,
 	}
     }
 }
-
-impl<E> Action for EventAction<E> {
-    ///
-    /// Triggers the event handler
-    ///
-    fn execute<'a>(&self, context: &mut Context<'a>, scheduler: &mut Scheduler) -> Result<(), Error> {
-	self.event_handler.handle_event(&self.event, context, scheduler)
-    }
-}
-
-///
-/// A list of event handlers
-///
-pub struct EventHandlers<E: 'static> {
-    ///
-    /// The list of event handlers
-    ///
-    handlers: BTreeMap<usize, Rc<dyn EventHandler<E>>>,
-    ///
-    /// The next ID
-    ///
-    next_id: usize,
-}
-
-impl<E: 'static> EventHandlers<E> {
-    ///
-    /// Creates a new list of event handlers
-    ///
-    pub fn new() -> EventHandlers<E> {
-	EventHandlers {
-	    handlers: BTreeMap::new(),
-	    next_id: 0,
-	}
-    }
-
-    pub fn add(&mut self, event_handler: Rc<dyn EventHandler<E>>) -> EventHandlerId {
-	let id = self.next_id;
-	self.next_id += 1;
-	self.handlers.insert(id,event_handler);
-	id
-    }
-
-    pub fn remove(&mut self, id: EventHandlerId) {
-	self.handlers.remove(&id);
-    }
-
-    pub fn notify<'a>(&self, event: Rc<E>, scheduler: &mut Scheduler) {
-	self.handlers.iter()
-	    .for_each(|(_, handler) |
-		      scheduler.schedule_for_self(Rc::from(EventAction::new(event.clone(), handler.clone()))));
-    }
-}
-
-///
-/// An ID type for event handlers
-///
-pub type EventHandlerId = usize;
