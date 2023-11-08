@@ -15,11 +15,9 @@
 
 use crate::settings::Settings;
 use crate::graphics::buffer::IndexedTriangles;
-use crate::graphics::color::Color;
 use crate::graphics::font::Font;
 use crate::graphics::program::{Program, Uniform4f32, UniformMatrix4f32, UniformInteger};
 use crate::graphics::texture::Texture;
-use crate::graphics::transform::Transform;
 use crate::resource::Resources;
 
 use std::path::PathBuf;

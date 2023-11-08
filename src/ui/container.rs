@@ -15,7 +15,7 @@
 
 use crate::dimension::Dimension;
 use crate::position::Position;
-use crate::ui::component::{Component, Id};
+use crate::ui::component::Id;
 use crate::ui::error::Error;
 use crate::ui::event::Listener;
 use crate::ui::shape::{MovedEvent, ResizedEvent, Shape, ShapeRef};
@@ -111,7 +111,6 @@ impl Container {
 	
 	let mut y = position.y;
 	for row in self.rows.iter_mut() {
-	    let mut row_width = 0.0;
 	    let mut row_height = 0.0;
 	    let mut center_width = 0.0;
 	    let mut right_width = 0.0;
@@ -170,7 +169,6 @@ impl Container {
 	
 	let mut y = position.y;
 	for row in self.rows.iter_mut() {
-	    let mut row_width = 0.0;
 	    let mut row_height = 0.0;
 	    let mut center_width = 0.0;
 	    let mut right_width = 0.0;

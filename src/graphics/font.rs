@@ -156,7 +156,6 @@ impl Glyph {
     ///
     fn load(face: &mut freetype::Face, code_point: usize) -> Result<Glyph, Error> {
 	face.load_char(code_point, freetype::face::LoadFlag::RENDER)?;
-	let texture_id = 0;
 	let metrics = face.glyph().metrics();
 	let bitmap = face.glyph().bitmap();
 	Ok(Glyph {

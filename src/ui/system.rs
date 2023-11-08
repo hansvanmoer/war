@@ -40,23 +40,3 @@ pub trait Action {
     ///
     fn execute(&self) -> Result<(), Error>;
 }
-
-macro_rules! impl_component {
-    ($component_trait:ty, $component:ty, $widget:ty, $field:ident, $getter:ident, $mutator:ident) => {
-	impl $component_trait for $widget {
-	    ///
-	    /// Gets the $component
-	    ///
-	    fn $getter(&self) -> &$component {
-		&self.$field
-	    }
-
-	    ///
-	    /// Gets a mutable reference to the $component
-	    ///
-	    fn $mutator(&mut self) -> &mut $component {
-		&mut self.$field
-	    }
-	}
-    }
-}

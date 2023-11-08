@@ -312,7 +312,7 @@ impl From<std::ffi::NulError> for Error {
     ///
     /// Converts a CString error into a program error
     ///
-    fn from(e: std::ffi::NulError) -> Error {
+    fn from(_: std::ffi::NulError) -> Error {
 	Error::BadUniformName
     }
 }

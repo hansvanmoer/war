@@ -18,7 +18,7 @@ use crate::position::Position;
 use crate::ui::component::{Component, Id};
 use crate::ui::event::{ComponentEvent, Listeners, Listener};
 use crate::ui::error::Error;
-use crate::ui::system::{Action, System};
+use crate::ui::system::System;
 
 use std::cell::RefCell;
 use std::rc::{Rc, Weak};

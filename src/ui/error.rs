@@ -36,13 +36,13 @@ pub enum Error {
 }
 
 impl From<BorrowError> for Error {
-    fn from(e: BorrowError) -> Error {
+    fn from(_: BorrowError) -> Error {
 	Error::BorrowError
     }
 }
 
 impl From<BorrowMutError> for Error {
-    fn from(e: BorrowMutError) -> Error {
+    fn from(_: BorrowMutError) -> Error {
 	Error::BorrowError
     }
 }
