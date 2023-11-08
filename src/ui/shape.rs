@@ -16,7 +16,7 @@
 use crate::dimension::Dimension;
 use crate::position::Position;
 use crate::ui::component::{Component, Id};
-use crate::ui::event::{ComponentEvent, Listeners};
+use crate::ui::event::{ComponentEvent, Listeners, Listener};
 use crate::ui::error::Error;
 use crate::ui::system::{Action, System};
 
@@ -62,15 +62,15 @@ impl Shape {
     ///
     /// Creates a new shape
     ///
-    pub fn new(system: &Rc<RefCell<System>>, id: Id, position: Position, preferred_size: Dimension) -> Shape {
-	Shape {
+    pub fn new(system: &Rc<RefCell<System>>, id: Id, position: Position, preferred_size: Dimension) -> Rc<RefCell<Shape>> {
+	Rc::from(RefCell::from(Shape {
 	    id: id,
 	    system: Rc::downgrade(system),
 	    position,
 	    on_move: Listeners::new(),
 	    preferred_size,
 	    on_resize: Listeners::new(),
-	}
+	}))
     }
     
     ///
@@ -88,6 +88,21 @@ impl Shape {
 	self.on_move.try_schedule_notify(Rc::from(MovedEvent::new(self.id)), &self.system)
     }
 
+
+    ///
+    /// Register on move listener
+    ///
+    pub fn register_on_move(&mut self, listener: Rc<dyn Listener<MovedEvent>>) -> Id {
+	self.on_move.register(listener)
+    }
+
+    ///
+    /// Unregister on move listener
+    ///
+    pub fn unregister_on_move(&mut self, id: Id) -> Option<Rc<dyn Listener<MovedEvent>>> {
+	self.on_move.unregister(id)
+    }
+    
     ///
     /// Gets the preferred size
     ///
@@ -101,6 +116,20 @@ impl Shape {
     pub fn set_preferred_size(&mut self, size: Dimension) -> Result<(), Error> {
 	self.preferred_size = size;
 	self.on_resize.try_schedule_notify(Rc::from(ResizedEvent::new(self.id)), &self.system)
+    }
+
+    ///
+    /// Register on resize listener
+    ///
+    pub fn register_on_resize(&mut self, listener: Rc<dyn Listener<ResizedEvent>>) -> Id {
+	self.on_resize.register(listener)
+    }
+
+    ///
+    /// Unregister on resize listener
+    ///
+    pub fn unregister_on_resize(&mut self, id: Id) -> Option<Rc<dyn Listener<ResizedEvent>>> {
+	self.on_resize.unregister(id)
     }
 }
 
@@ -149,6 +178,21 @@ pub trait ShapeRef {
     ///
     fn set_preferred_size(&mut self, size: Dimension) -> Result<(), Error> {
 	self.shape().try_borrow_mut()?.set_preferred_size(size)
+    }
+
+    
+    ///
+    /// Register on resize listener
+    ///
+    fn register_on_resize(&mut self, listener: Rc<dyn Listener<ResizedEvent>>) -> Result<Id, Error> {
+	Ok(self.shape().try_borrow_mut()?.on_resize.register(listener))
+    }
+
+    ///
+    /// Unregister on resize listener
+    ///
+    fn unregister_on_resize(&mut self, id: Id) -> Result<Option<Rc<dyn Listener<ResizedEvent>>>, Error> {
+	Ok(self.shape().try_borrow_mut()?.on_resize.unregister(id))
     }
 }
 

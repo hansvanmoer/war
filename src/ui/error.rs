@@ -25,6 +25,11 @@ pub enum Error {
     NoSystem,
 
     ///
+    /// The component no longer exists
+    ///
+    NoComponent,
+    
+    ///
     /// An error occurred borrowing a value, this indicates a programming error
     ///
     BorrowError,

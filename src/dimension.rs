@@ -51,6 +51,38 @@ impl Dimension {
     }
 
     ///
+    /// Combines two sizes in a row to form a size tuple that contains both
+    ///
+    pub fn combine_horizontal(first: Dimension, second: Dimension) -> Dimension {
+	let width = first.width + second.width;
+	let height = if first.height > second.height {
+	    first.height
+	} else {
+	    second.height
+	};
+	Dimension {
+	    width,
+	    height,
+	}
+    }
+
+    ///
+    /// Combines two sizes verically
+    ///
+    pub fn combine_vertical(first: Dimension, second: Dimension) -> Dimension {
+	let width = if first.width > second.width {
+	    first.width
+	} else {
+	    second.width
+	};
+	let height = first.height + second.height;
+	Dimension {
+	    width,
+	    height
+	}
+    }
+
+    ///
     /// Returns the width
     ///
     pub fn width(&self) -> f32 {

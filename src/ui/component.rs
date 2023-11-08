@@ -25,5 +25,5 @@ pub trait Component {
     ///
     /// The ID of the widget to which this component belongs
     ///
-    fn id() -> Id;   
+    fn id(&self) -> Id;
 }
