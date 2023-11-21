@@ -26,17 +26,12 @@ use std::rc::{Rc, Weak};
 ///
 /// A component with a shape
 ///
-pub struct Shape {
+pub struct Shape {   
     ///
-    /// A unique ID referencing the shape
+    /// A reference to this shape's component data
     ///
-    id: Id,
-    
-    ///
-    /// A reference to the system that created this shape
-    ///
-    system: Weak<RefCell<System>>,
-    
+    component: Rc<RefCell<Component>>,
+
     ///
     /// The component's position
     ///
@@ -62,10 +57,9 @@ impl Shape {
     ///
     /// Creates a new shape
     ///
-    pub fn new(system: &Rc<RefCell<System>>, id: Id, position: Position, preferred_size: Dimension) -> Rc<RefCell<Shape>> {
+    pub fn new(component: Rc<RefCell<Component>>, id: Id, position: Position, preferred_size: Dimension) -> Rc<RefCell<Shape>> {
 	Rc::from(RefCell::from(Shape {
-	    id: id,
-	    system: Rc::downgrade(system),
+	    component,
 	    position,
 	    on_move: Listeners::new(),
 	    preferred_size,
@@ -84,8 +78,9 @@ impl Shape {
     /// Sets the position of this shape
     ///
     pub fn set_position(&mut self, position: Position) -> Result<(), Error>{
+	let component = self.component.try_borrow()?;
 	self.position = position;
-	self.on_move.try_schedule_notify(Rc::from(MovedEvent::new(self.id)), &self.system)
+	self.on_move.try_schedule_notify(Rc::from(MovedEvent::new(component.id())), &component.system()?)
     }
 
 
@@ -114,8 +109,9 @@ impl Shape {
     /// Resizes the component
     ///
     pub fn set_preferred_size(&mut self, size: Dimension) -> Result<(), Error> {
+	let component = self.component.try_borrow()?;
 	self.preferred_size = size;
-	self.on_resize.try_schedule_notify(Rc::from(ResizedEvent::new(self.id)), &self.system)
+	self.on_resize.try_schedule_notify(Rc::from(ResizedEvent::new(component.id())), &component.system()?)
     }
 
     ///
@@ -130,12 +126,7 @@ impl Shape {
     ///
     pub fn unregister_on_resize(&mut self, id: Id) -> Option<Rc<dyn Listener<ResizedEvent>>> {
 	self.on_resize.unregister(id)
-    }
-}
 
-impl Component for Shape {
-    fn id(&self) -> Id {
-	self.id
     }
 }
 

@@ -13,12 +13,14 @@
  *
  */
 
+use crate::ui::component::Id;
 use crate::ui::error::Error;
 
 ///
 /// The UI subsystem
 ///
 pub struct System {
+    next_id: Id,
     scheduled: Vec<Box<dyn Action>>,
 }
 
@@ -28,6 +30,16 @@ impl System {
     ///
     pub fn schedule(&mut self, action: Box<dyn Action>) {
 	self.scheduled.push(action);
+    }
+
+    ///
+    /// Creates the next ID
+    ///
+    pub fn create_id(&mut self) -> Id {
+	let id = self.next_id;
+	self.next_id += 1;
+	id
+	
     }
 }
 

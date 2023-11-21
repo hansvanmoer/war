@@ -61,8 +61,7 @@ impl<E: 'static> Listeners<E> {
     ///
     /// Schedules event notification
     ///
-    pub fn try_schedule_notify(&self, event: Rc<E>, system: &Weak<RefCell<System>>) -> Result<(), Error> {
-	let system = system.upgrade().ok_or(Error::NoSystem)?;
+    pub fn try_schedule_notify(&self, event: Rc<E>, system: &Rc<RefCell<System>>) -> Result<(), Error> {
 	let mut system = system.borrow_mut();
 	self.listeners.iter().for_each(|l| system.schedule(Box::from(NotifyAction {
 	    event: event.clone(),

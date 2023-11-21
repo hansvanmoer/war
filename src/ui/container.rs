@@ -103,6 +103,9 @@ impl Container {
 	Ok(())
     }
 
+    ///
+    /// Updates child components when this component is moved
+    ///
     fn update_after_move(&mut self) -> Result<(), Error> {
 	let shape_ref = Weak::upgrade(&self.shape).ok_or(Error::NoComponent)?;
 	let shape = shape_ref.try_borrow_mut()?;
@@ -158,7 +161,10 @@ impl Container {
 	}
 	Ok(())
     }
-    
+
+    ///
+    /// Updates the component when one of its children has been resized
+    ///
     fn update_after_resize(&mut self) -> Result<(), Error>{
 	let shape_ref = Weak::upgrade(&self.shape).ok_or(Error::NoComponent)?;
 	let mut shape = shape_ref.try_borrow_mut()?;
