@@ -13,140 +13,152 @@
  *
  */
 
+use crate::dimension::Dimension;
+use crate::position::Position;
+use crate::ui::action::Scheduler;
 use crate::ui::error::Error;
-use crate::ui::system::System;
+use crate::ui::event::{Handler, HandlerId, Handlers};
 
 use std::cell::RefCell;
 use std::rc::{Rc, Weak};
 
 ///
-/// An ID type for components
-///
-pub type Id = usize;
-
-///
-/// All generic component fields go here
+/// A component
 ///
 pub struct Component {
     ///
-    /// A unique ID identifying the component
+    /// A self reference
     ///
-    id: Id,
+    component: Weak<RefCell<Component>>,
 
     ///
-    /// A weak self reference, used to construct more references
+    /// The component's position
     ///
-    reference: Box<dyn ComponentWeakRef + 'static>,
+    position: Position,
 
     ///
-    /// A reference to the underlying system
+    /// Moved event handlers
     ///
-    system: Weak<RefCell<System>>,
+    moved_handlers: Handlers<MovedEvent>,
     
     ///
-    /// A reference to the parent component, if any
+    /// The component's size
     ///
-    parent: Option<Box<dyn ComponentWeakRef + 'static>>,
+    size: Dimension,
+
+    ///
+    /// Resized handlers
+    ///
+    resized_handlers: Handlers<ResizedEvent>,
 }
 
 impl Component {
-
     ///
     /// Creates a new component
     ///
-    pub fn new(system: &Rc<RefCell<System>>) -> Result<Rc<RefCell<Component>>, Error> {
-	Ok(Rc::from(RefCell::from(Component {
-	    id: system.try_borrow_mut()?.create_id(),
-	    reference: NoComponentWeakRef::new(),
-	    system: Rc::downgrade(system),
-	    parent: None, 
-	})))
+    pub fn new() -> Rc<RefCell<Component>> {
+	let mut component = Rc::from(RefCell::from(Component {
+	    component: Weak::new(),
+	    position: Position::default(),
+	    moved_handlers: Handlers::new(),
+	    size: Dimension::default(),
+	    resized_handlers: Handlers::new(),
+	}));
+	component.borrow_mut().component = Rc::downgrade(&component);
+	component
     }
 
     ///
-    /// Returns the component's unique ID
+    /// Moves the component
     ///
-    pub fn id(&self) -> Id {
-	self.id
-    }
-    
-    ///
-    /// Returns a reference to the system
-    ///
-    pub fn system(&self) -> Result<Rc<RefCell<System>>, Error> {
-	self.system.upgrade().ok_or(Error::NoSystem)
-    }
-    
-    ///
-    /// Sets the reference to the component itself
-    ///
-    pub fn set_reference(&mut self, reference: Box<dyn ComponentWeakRef>) {
-	self.reference = reference;
-    }
-    
-}
-
-///
-/// The reference to a generic component
-///
-pub trait ComponentRef: {
-    ///
-    /// Returns a reference to the underlying component
-    ///
-    fn component(&self) -> Rc<RefCell<Component>>;
-
-    ///
-    /// Downgrade this reference to a weak reference
-    ///
-    fn downgrade(self) -> Result<Box<dyn ComponentWeakRef + 'static>, Error>;    
-    
-    ///
-    /// Creates a new reference to this component
-    ///
-    fn reference(&self) -> Result<Box<dyn ComponentRef + 'static>, Error> {
-	self.component().try_borrow()?.reference.upgrade().ok_or(Error::NoComponent)
+    pub fn set_position(&mut self, position: Position, scheduler: &mut Scheduler) {
+	let event = Rc::from(MovedEvent {
+	    component: self.component.clone(),
+	    original_position: self.position.clone(),
+	    new_position: position.clone(),
+	});
+	self.moved_handlers.schedule(&event, scheduler);
+	self.position = position;
     }
 
     ///
-    /// The ID of the widget to which this component belongs
+    /// Adds a handler that will be notified when the component is moved
     ///
-    fn id(&self) -> Result<Id, Error> {
-	Ok(self.component().try_borrow()?.id)
+    pub fn add_moved_handler(&mut self, handler: Rc<dyn Handler<MovedEvent>>) -> HandlerId {
+	self.moved_handlers.add(handler)
+    }
+
+    ///
+    /// Removed a moved handler
+    ///
+    pub fn remove_moved_handler(&mut self, id: HandlerId) -> Result<Rc<dyn Handler<MovedEvent>>, Error>{
+	self.moved_handlers.remove(id)
     }
     
     ///
-    /// A reference to the parent component, if any
+    /// Resizes the component
     ///
-    fn parent(&self) -> Result<Option<Box<dyn ComponentRef + 'static>>, Error> {
-	let component = self.component();
-	let component = component.try_borrow()?;
-	match component.parent {
-	    Some(ref p) => Ok(p.upgrade()),
-	    None => Ok(None),
-	}
+    pub fn set_size(&mut self, size: Dimension, scheduler: &mut Scheduler) {
+	let event = Rc::from(ResizedEvent {
+	    component: self.component.clone(),
+	    original_size: self.size.clone(),
+	    new_size: size.clone(),
+	});
+	self.resized_handlers.schedule(&event, scheduler);
+	self.size = size;
+    }
+    
+    ///
+    /// Adds a handler that will be notified when the component is resized
+    ///
+    pub fn add_resized_handler(&mut self, handler: Rc<dyn Handler<ResizedEvent>>) -> HandlerId {
+	self.resized_handlers.add(handler)
+    }
+
+    ///
+    /// Removes a resized handler
+    ///
+    pub fn remove_resized_handler(&mut self, id: HandlerId) -> Result<Rc<dyn Handler<ResizedEvent>>, Error>{
+	self.resized_handlers.remove(id)
     }
 }
 
 ///
-/// A weak reference to a component
+/// An event for when the component has been moved
 ///
-pub trait ComponentWeakRef {
+pub struct MovedEvent {
     ///
-    /// Upgrades the 
+    /// The component
     ///
-    fn upgrade(&self) -> Option<Box<dyn ComponentRef + 'static>>;
-}
-			       
-pub struct NoComponentWeakRef {}
+    component: Weak<RefCell<Component>>,
+    
+    ///
+    /// The original position
+    ///
+    original_position: Position,
 
-impl NoComponentWeakRef {
-    fn new() -> Box<NoComponentWeakRef> {
-	Box::from(NoComponentWeakRef {})
-    }
+    ///
+    /// The new position
+    ///
+    new_position: Position,
 }
 
-impl ComponentWeakRef for NoComponentWeakRef {
-    fn upgrade(&self) -> Option<Box<dyn ComponentRef + 'static>> {
-	None
-    }
+///
+/// An event for when the component has been resized
+///
+pub struct ResizedEvent {
+    ///
+    /// The component
+    ///
+    component: Weak<RefCell<Component>>,
+
+    ///
+    /// The original size
+    ///
+    original_size: Dimension,
+
+    ///
+    /// The new size
+    ///
+    new_size: Dimension,
 }

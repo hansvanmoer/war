@@ -16,33 +16,39 @@
 use std::cell::{BorrowError, BorrowMutError};
 
 ///
-/// All errors that can occur in the UI subsystem
+/// All UI errors
 ///
+#[derive(Debug, PartialEq)]
 pub enum Error {
     ///
-    /// The system no longer exists
+    /// An action is triggering an endless loop
     ///
-    NoSystem,
+    ActionLoop,
 
     ///
-    /// The component no longer exists
+    /// The specified handler was not registered
     ///
-    NoComponent,
-    
+    NoHandler,
+
     ///
-    /// An error occurred borrowing a value, this indicates a programming error
+    /// Could not borrow a component
     ///
-    BorrowError,
+    Borrow,
+
+    ///
+    /// Could not mutably borrow a component
+    ///
+    BorrowMut,
 }
 
 impl From<BorrowError> for Error {
-    fn from(_: BorrowError) -> Error {
-	Error::BorrowError
+    fn from(e: BorrowError) -> Error {
+	Error::Borrow
     }
 }
 
 impl From<BorrowMutError> for Error {
-    fn from(_: BorrowMutError) -> Error {
-	Error::BorrowError
+    fn from(e: BorrowMutError) -> Error {
+	Error::BorrowMut
     }
 }

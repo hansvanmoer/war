@@ -14,118 +14,93 @@
  */
 
 use crate::arena::Arena;
-use crate::ui::component::Id;
+use crate::ui::action::{Action, Scheduler};
 use crate::ui::error::Error;
-use crate::ui::system::{Action, System};
 
-use std::cell::RefCell;
 use std::rc::{Rc, Weak};
 
 ///
-/// An event listener
+/// An event handler
 ///
-pub trait Listener<E: 'static> {
+pub trait Handler<E: 'static> {
     ///
-    /// Notifies the handler that an event has been triggered
+    /// Handles an event
     ///
-    fn notify(&self, event: Rc<E>) -> Result<(), Error>;
+    fn handle(&self, event: &Rc<E>, scheduler: &mut Scheduler) -> Result<(), Error>;
 }
 
 ///
-/// A set of event listeners
+/// An ID type for a handler
 ///
-pub struct Listeners<E: 'static> {
+pub type HandlerId = usize;
+
+///
+/// A set of handlers
+///
+pub struct Handlers<E: 'static> {
     ///
-    /// A set of listeners
+    /// The handlers
     ///
-    listeners: Arena<Rc<dyn Listener<E>>>,
+    handlers: Arena<Rc<dyn Handler<E>>>,
 }
 
-impl<E: 'static> Listeners<E> {
+impl<E: 'static> Handlers<E> {
     ///
-    /// Creates a new set of listeners
+    /// Constructs a new set of handlers 
     ///
-    pub fn new() -> Listeners<E> {
-	Listeners {
-	    listeners: Arena::new(),
+    pub fn new() -> Handlers<E> {
+	Handlers {
+	    handlers: Arena::new(),
 	}
     }
 
     ///
-    /// Notifies all listeners
+    /// Schedules an event
     ///
-    pub fn notify(&self, event: Rc<E>) -> Result<(), Error> {
-	self.listeners.iter().try_for_each(|l| l.notify(event.clone()))
-    }
-
-    ///
-    /// Schedules event notification
-    ///
-    pub fn try_schedule_notify(&self, event: Rc<E>, system: &Rc<RefCell<System>>) -> Result<(), Error> {
-	let mut system = system.borrow_mut();
-	self.listeners.iter().for_each(|l| system.schedule(Box::from(NotifyAction {
+    pub fn schedule(&self, event: &Rc<E>, scheduler: &mut Scheduler) {
+	self.handlers.iter().for_each(|handler| scheduler.schedule(EventAction {
 	    event: event.clone(),
-	    listener: Rc::downgrade(&l),
-	})));
-	Ok(())
+	    handler: Rc::downgrade(handler),
+	}));
     }
 
     ///
-    /// Registers a listener
+    /// Add a handler
     ///
-    pub fn register(&mut self, listener: Rc<dyn Listener<E>>) -> Id {
-	self.listeners.insert(listener)
+    pub fn add(&mut self, handler: Rc<dyn Handler<E>>) -> HandlerId {
+	self.handlers.insert(handler)
     }
 
     ///
-    /// Unregisters a listener
+    /// Removes a handler
     ///
-    pub fn unregister(&mut self, id: Id) -> Option<Rc<dyn Listener<E>>> {
-	self.listeners.remove(id)
+    pub fn remove(&mut self, id: HandlerId) -> Result<Rc<dyn Handler<E>>, Error> {
+	self.handlers.remove(id).ok_or(Error::NoHandler)
     }
 }
 
 ///
-/// Wraps an event into an action
+/// An action that triggers an event
 ///
-struct NotifyAction<E: 'static> {
+struct EventAction<E: 'static> {
+    ///
+    /// The event handler
+    ///
+    handler: Weak<dyn Handler<E>>,
+
     ///
     /// The event
     ///
     event: Rc<E>,
-
-    ///
-    /// The listener
-    ///
-    listener: Weak<dyn Listener<E>>,
 }
 
-impl<E: 'static> Action for NotifyAction<E> {
-    fn execute(&self) -> Result<(), Error> {
-	if let Some(listener) = self.listener.upgrade() {
-	    listener.notify(self.event.clone())?;
+impl<E: 'static> Action for EventAction<E> {
+    fn execute(&self, scheduler: &mut Scheduler) -> Result<(), Error> {
+	if let Some(handler) = self.handler.upgrade() {
+	    handler.handle(&self.event, scheduler)?;
 	}
 	Ok(())
     }
 }
 
-///
-/// A basic event triggered by a component
-///
-pub struct ComponentEvent {
-    ///
-    /// The ID of the component that triggered the event
-    ///
-    pub id: Id,
-}
 
-impl ComponentEvent {
-    ///
-    ///
-    ///
-    pub fn new(id: Id) -> ComponentEvent {
-	ComponentEvent {
-	    id,
-	}
-    }
-}
